@@ -93,7 +93,7 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
     double k0_scaffold = global_parameters[22]; // Scaffold stiffness parameters
     double kf_scaffold = global_parameters[23];
     double k2_scaffold = global_parameters[24];
-    double d_c_phi_rho = global_parameters[25];
+    double d_c_phif_scaffold_rho = global_parameters[25];
 
 	//std::cout<<"read all global parameters\n";
 	//
@@ -438,7 +438,7 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		double S_rho = (p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(1-rho/K_rho_rho)*rho - d_rho*rho;
 		// heviside function for elastic response of the chemical
 		//double S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - d_c*c;
-        double S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - (d_c + d_c_phi_rho*phif_total*rho)*c;
+        double S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - (d_c + d_c_phif_scaffold_rho*phif_scaffold*rho)*c;
 		//std::cout<<"flux of celss, Q _rho\n"<<Q_rho<<"\n";
 		//std::cout<<"source of cells, S_rho: "<<S_rho<<"\n";
 		//std::cout<<"flux of chemical, Q _c\n"<<Q_c<<"\n";
@@ -788,8 +788,8 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		// explicit derivatives of source terms
 		double dS_rhodrho_explicit = (p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(1-rho/K_rho_rho) - d_rho + rho*(p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(-1./K_rho_rho);
 		double dS_rhodc_explicit = (1-rho/K_rho_rho)*rho*(p_rho_c/(K_rho_c+c) - p_rho_c*c/((K_rho_c+c)*(K_rho_c+c)));
-		double dS_cdrho_explicit = (p_c_rho*c + p_c_thetaE*He)*(1./(K_c_c+c)) - (d_c_phi_rho*phif_total)*c;
-		double dS_cdc_explicit = -(d_c + d_c_phi_rho*rho*phif_total) + (p_c_rho*c + p_c_thetaE*He)*(-rho/((K_c_c+c)*(K_c_c+c))) + (rho/(K_c_c+c))*p_c_rho;
+		double dS_cdrho_explicit = (p_c_rho*c + p_c_thetaE*He)*(1./(K_c_c+c)) - (d_c_phif_scaffold_rho*phif_scaffold)*c;
+		double dS_cdc_explicit = -(d_c + d_c_phif_scaffold_rho*rho*phif_scaffold) + (p_c_rho*c + p_c_thetaE*He)*(-rho/((K_c_c+c)*(K_c_c+c))) + (rho/(K_c_c+c))*p_c_rho;
 		// total derivatives
 		double dS_rhodrho = dS_rhodrho_explicit + dS_rhodphif*dphifdrho + dS_rhodphif_scaffold*dphifscaffolddrho + dS_rhoda0x*da0xdrho + dS_rhoda0y*da0ydrho
 							+dS_rhodkappa*dkappadrho+dS_rhodlamdaPa*dlamdaP_adrho+dS_rhodlamdaPs*dlamdaP_sdrho;
@@ -984,7 +984,7 @@ Matrix2d & SS,Vector2d &Q_rho,double &S_rho, Vector2d &Q_c,double &S_c)
     double k0_scaffold = global_parameters[22]; // Scaffold stiffness parameters
     double kf_scaffold = global_parameters[23];
     double k2_scaffold = global_parameters[24];
-    double d_c_phi_rho = global_parameters[25];
+    double d_c_phif_scaffold_rho = global_parameters[25];
 
     double phif_total = phif + phif_scaffold;
 	Matrix2d CC = FF.transpose()*FF;
@@ -1045,7 +1045,7 @@ Matrix2d & SS,Vector2d &Q_rho,double &S_rho, Vector2d &Q_c,double &S_c)
     Q_c = -3*(D_cc-phif_total*(D_cc-D_cc/10))*A0*Grad_c/trA;
 	double He = 1./(1.+exp(-gamma_theta*(thetaE - vartheta_e)));
 	S_rho = (p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(1-rho/K_rho_rho)*rho - d_rho*rho;
-	S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - (d_c + d_c_phi_rho*rho*phif_total)*c;
+	S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - (d_c + d_c_phif_scaffold_rho*rho*phif_scaffold)*c;
 }
 
 
@@ -2485,7 +2485,7 @@ void evalS(const std::vector<double> &global_parameters, const double& phif, con
     double k0_scaffold = global_parameters[22]; // Scaffold stiffness parameters
     double kf_scaffold = global_parameters[23];
     double k2_scaffold = global_parameters[24];
-    double d_c_phi_rho = global_parameters[25];
+    double d_c_phif_scaffold_rho = global_parameters[25];
 
     double phif_total = phif + phif_scaffold;
     Matrix2d CCinv = CC.inverse();
@@ -2512,7 +2512,7 @@ void evalS(const std::vector<double> &global_parameters, const double& phif, con
 
     double He = 1./(1.+exp(-gamma_theta*(thetaE - vartheta_e)));
     S_rho = (p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(1-rho/K_rho_rho)*rho - d_rho*rho;
-    S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - (d_c + d_c_phi_rho*rho*phif_total)*c;
+    S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - (d_c + d_c_phif_scaffold_rho*rho*phif_scaffold)*c;
 }
 
 //--------------------------------------------------------//
