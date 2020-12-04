@@ -140,8 +140,8 @@ int main(int argc, char *argv[])
         double p_c_rho = 90.0e-16*t_max/c_max/c_max;// production of c by cells in g/cells/h
         double p_c_thetaE = 300.0e-16*t_max/c_max/c_max; // coupling of elastic and chemical, three fold
         double K_c_c = 1./c_max;// saturation of chem by chem, from steady state
-        double d_c = 0.01*t_max; // 0.01 decay of chemical in 1/hours
-        double d_c_phi_rho = d_c*rho_phys; //d_c_phi_rho_vector[sample]*t_max; // 0.01 decay of chemical in 1/hours
+        double d_c = 0.001*t_max; // 0.01 decay of chemical in 1/hours
+        double d_c_phi_rho = 0; //d_c*rho_phys; //d_c_phi_rho_vector[sample]*t_max; // 0.01 decay of chemical in 1/hours
         //---------------------------------//
         std::vector<double> global_parameters = {k0,kf,k2,t_rho,t_rho_c,K_t,K_t_c,D_rhorho,D_rhoc,D_cc,p_rho,p_rho_c,p_rho_theta,K_rho_c,K_rho_rho,d_rho,vartheta_e,gamma_theta,p_c_rho,p_c_thetaE,K_c_c,d_c, k0_scaffold, kf_scaffold, k2_scaffold, d_c_phi_rho};
 
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
         double c_wound = 1.0; //1.0e-4;
         double phif0_wound = 0;
         double phif_scaffold_0_wound = 0.01; //phi_vector[sample];
-        double kappa0_wound = 0.4; //kappa_vector[sample];
+        double kappa0_wound = 0.3; //kappa_vector[sample];
         double a0x = cos(0); // mu_vector[sample]
         double a0y = sin(0);
         Vector2d a0_wound; a0_wound<<a0x,a0y;
@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
                     double mu_interp = mu_vector[sample]*(1 - smoother_step);
                     Vector2d a0_transition = Vector2d(cos(mu_interp),sin(mu_interp));
                     ip_a00[elemi*IP_size+ip] = a0_wound;
-                    if(kappa0_healthy > kappa0_wound){
+                    if(kappa0_healthy >= kappa0_wound){
                         ip_kappa0[elemi*IP_size+ip] = kappa0_wound + (kappa0_healthy - kappa0_wound)*smoother_step;
                     }
                     else{
