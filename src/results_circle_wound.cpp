@@ -119,8 +119,8 @@ int main(int argc, char *argv[])
         double k0 = 0.0511/stress_phys; // neo hookean for skin, used previously, in MPa
         double kf = 0.015/stress_phys; // stiffness of collagen in MPa, from previous paper
         double k2 = 0.048; // nonlinear exponential coefficient, non-dimensional
-        double k0_scaffold = k0; //k0_vector[sample]/stress_phys; // neo hookean for skin, used previously, in MPa
-        double kf_scaffold = kf; //kf_vector[sample]/stress_phys; // stiffness of collagen in MPa, from previous paper
+        double k0_scaffold = 0.004774/stress_phys; //k0; //k0_vector[sample]/stress_phys; // neo hookean for skin, used previously, in MPa
+        double kf_scaffold = 0.000380/stress_phys;  //kf; //kf_vector[sample]/stress_phys; // stiffness of collagen in MPa, from previous paper
         double k2_scaffold = k2; //k2_vector[sample]; // nonlinear exponential coefficient, non-dimensional
         double t_rho = 0.005/stress_phys; // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
         double t_rho_c = 10*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
         double p_c_thetaE = 300.0e-16*t_max/c_max/c_max; // coupling of elastic and chemical, three fold
         double K_c_c = 1./c_max;// saturation of chem by chem, from steady state
         double d_c = 0.001*t_max; // 0.01 decay of chemical in 1/hours
-        double d_c_phi_rho = d_c; //d_c_phi_rho_vector[sample]*t_max; // 0.01 decay of chemical in 1/hours
+        double d_c_phi_rho = 100*d_c; //d_c_phi_rho_vector[sample]*t_max; // 0.01 decay of chemical in 1/hours
         //---------------------------------//
         std::vector<double> global_parameters = {k0,kf,k2,t_rho,t_rho_c,K_t,K_t_c,D_rhorho,D_rhoc,D_cc,p_rho,p_rho_c,p_rho_theta,K_rho_c,K_rho_rho,d_rho,vartheta_e,gamma_theta,p_c_rho,p_c_thetaE,K_c_c,d_c, k0_scaffold, kf_scaffold, k2_scaffold, d_c_phi_rho};
 

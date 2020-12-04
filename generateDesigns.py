@@ -16,7 +16,7 @@ import pyDOE as pd
 import numpy as np
 
 # Specify how many simulations you can afford:
-num_simulations = 1
+num_simulations = 1000
 
 # Constants
 
@@ -32,7 +32,7 @@ bounds = np.array([[0.004774, 0.2014], # k_0 [MPa]
                    [0.0, 0.5], # kappa
                    [0.01, 1.0], # phif_scaffold [-]
                    [0.000970, 0.000970*50], # d_phif [/hr]
-                   [0.0, 0.1]]) # d_c_phif_rho [g/mm3]
+                   [0.001, 1.0]]) # d_c_phif_rho [g/mm3]
 
 # Other interesting parameters
 # t_rho, K_t, tau_lamdaP, D_0/D_inf, H
