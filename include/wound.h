@@ -24,9 +24,9 @@ const std::vector<Matrix2d> &ip_Jac,
 const std::vector<double> &global_parameters,const std::vector<double> &local_parameters,
 const std::vector<double> &node_rho_0, const std::vector<double> &node_c_0,
 std::vector<Matrix2d> &ip_strain_pi, std::vector<Matrix2d> &ip_stress_pi, std::vector<Vector2d> &ip_lamdaE_pi,
-const std::vector<double> &ip_phif_0,const std::vector<Vector2d> &ip_a0_0,const std::vector<double> &ip_kappa_0, const std::vector<Vector2d> &ip_lamdaP_0,
+const std::vector<double> &ip_phif_0,const std::vector<double> &ip_phif_scaffold_0,const std::vector<Vector2d> &ip_a0_0,const std::vector<double> &ip_kappa_0, const std::vector<Vector2d> &ip_lamdaP_0,
 const std::vector<double> &node_rho, const std::vector<double> &node_c,
-std::vector<double> &ip_phif, std::vector<Vector2d> &ip_a0, std::vector<double> &ip_kappa, std::vector<Vector2d> &ip_lamdaP,
+std::vector<double> &ip_phif, std::vector<double> &ip_phif_scaffold, std::vector<Vector2d> &ip_a0, std::vector<double> &ip_kappa, std::vector<Vector2d> &ip_lamdaP,
 const std::vector<Vector2d> &node_x,
 VectorXd &Re_x,MatrixXd &Ke_x_x,MatrixXd &Ke_x_rho,MatrixXd &Ke_x_c,
 VectorXd &Re_rho,MatrixXd &Ke_rho_x, MatrixXd &Ke_rho_rho,MatrixXd &Ke_rho_c,
@@ -39,7 +39,7 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c);
 //========================================================//
 // EVAL SOURCE AND FLUX 
 //
-void evalFluxesSources(const std::vector<double> &global_parameters, double phif,Vector2d a0,double kappa,Vector2d lampdaP,
+void evalFluxesSources(const std::vector<double> &global_parameters, double phif, double phif_scaffold, Vector2d a0,double kappa,Vector2d lampdaP,
 Matrix2d FF,double rho, double c, Vector2d Grad_rho, Vector2d Grad_c,
 Matrix2d & SS,Vector2d &Q_rho,double &S_rho, Vector2d &Q_c,double &S_c);
 //
@@ -53,8 +53,8 @@ Matrix2d & SS,Vector2d &Q_rho,double &S_rho, Vector2d &Q_c,double &S_c);
 void localWoundProblem(
 double dt, const std::vector<double> &local_parameters,
 double C,double rho,const Matrix2d &CC,
-double phif_0, const Vector2d &a0_0, double kappa_0, const Vector2d &lamdaP_0,
-double &phif, Vector2d &a0, double &kappa, Vector2d &lamdaP,
+double phif_0, double phif_scaffold_0, const Vector2d &a0_0, double kappa_0, const Vector2d &lamdaP_0,
+double &phif, double &phif_scaffold, Vector2d &a0, double &kappa, Vector2d &lamdaP,
 VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadC);
 //
 //========================================================//
@@ -77,7 +77,11 @@ void evalForwardEulerUpdate(double local_dt, const std::vector<double> &local_pa
 //
 //========================================================//
 
+void evalQ(const std::vector<double> &global_parameters, const double& phif, const double& phif_scaffold,Vector2d a0,double kappa, const Vector2d& lamdaP,
+           const Matrix2d& CC, const double& rho, const double& c, const Vector2d& Grad_rho, const Vector2d& Grad_c, Vector2d &Q_rho, Vector2d &Q_c);
 
+void evalS(const std::vector<double> &global_parameters, const double& phif, const double& phif_scaffold,Vector2d a0, double kappa, const Vector2d& lamdaP,
+           const Matrix2d& CC, const double& rho, const double& c, double &S_rho, double &S_c);
 
 // ========================================================//
 // OUTPUT FUNCTION: eval FF at coordinates xi, eta
@@ -134,14 +138,14 @@ std::vector<double> evalShapeFunctionsQuadraticReta(double xi,double eta);
 //-----------------------------//
 // Eval strain energy 
 //
-void evalPsif(const std::vector<double> &global_parameters,double kappa, double I1e,double I4e,double &Psif,double &Psif1,double &Psif4);
+void evalPsif(const std::vector<double> &global_parameters,double kappa, double I1e,double I4e,double &Psif,double &Psif1,double &Psif4,double &Psif_scaffold,double &Psif1_scaffold,double &Psif4_scaffold);
 //
 //-----------------------------//
 
 //-----------------------------//
 // Eval passive reference stress
 //
-void evalSS(const std::vector<double> &global_parameters, double phif, Vector2d a0, double kappa, double lamdaP_a,double lamdaP_s,const Matrix2d &CC,double rho, double c, Matrix2d &SSpas,Matrix2d &SSact, Matrix2d&SSpres);
+void evalSS(const std::vector<double> &global_parameters, double phif, double phif_scaffold, Vector2d a0, double kappa, double lamdaP_a,double lamdaP_s,const Matrix2d &CC,double rho, double c, Matrix2d &SSpas,Matrix2d &SSact, Matrix2d&SSpres);
 //
 //-----------------------------//
 

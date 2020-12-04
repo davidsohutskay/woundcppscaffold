@@ -127,7 +127,7 @@ void evalElemJacobians(tissue &myTissue);
 // SPARSE SOLVER
 //----------------------------//
 //
-void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,const std::vector<int> &save_node,const std::vector<int> &save_ip);
+void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,const std::vector<int> &save_node, const std::vector<int> &save_ip, std::vector<int> &success_vector);
 
 // dense solver in previous version of wound.cpp
 // void denseWoundSolver(tissue &myTissue, std::string filename, int save_freq);

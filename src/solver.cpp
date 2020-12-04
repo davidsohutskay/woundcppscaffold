@@ -149,9 +149,10 @@ void evalElemJacobians(tissue &myTissue)
 // NOTE: at this point the struct is ready with all that is needed, including boundary and
 // initial conditions. Also, the internal constants, namely the Jacobians, have been
 // calculated and stored. Time to solve the global system
-void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,const std::vector<int> &save_node,const std::vector<int> &save_ip)
+void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,const std::vector<int> &save_node,const std::vector<int> &save_ip, std::vector<int> &success_vector)
 {
     Eigen::initParallel();
+    bool solver_status = true;
 	int n_dof = myTissue.n_dof;
     int n_elem = myTissue.LineQuadri.size();
     int elem_size = myTissue.LineQuadri[0].size();
@@ -237,10 +238,12 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 
                 // values of the structural variables at the IP
                 std::vector<double> ip_phif_0_pi; ip_phif_0_pi.clear();
+                std::vector<double> ip_phif_scaffold_0_pi; ip_phif_scaffold_0_pi.clear();
                 std::vector<Vector2d> ip_a0_0_pi; ip_a0_0_pi.clear();
                 std::vector<double> ip_kappa_0_pi; ip_kappa_0_pi.clear();
                 std::vector<Vector2d> ip_lamdaP_0_pi; ip_lamdaP_0_pi.clear();
                 std::vector<double> ip_phif_pi; ip_phif_pi.clear();
+                std::vector<double> ip_phif_scaffold_pi; ip_phif_scaffold_pi.clear();
                 std::vector<Vector2d> ip_a0_pi; ip_a0_pi.clear();
                 std::vector<double> ip_kappa_pi; ip_kappa_pi.clear();
                 std::vector<Vector2d> ip_lamdaP_pi; ip_lamdaP_pi.clear();
@@ -264,6 +267,8 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 					// structural variables
 					ip_phif_0_pi.push_back(myTissue.ip_phif_0[ei*IP_size+ipi]);
 					ip_phif_pi.push_back(myTissue.ip_phif[ei*IP_size+ipi]);
+                    ip_phif_scaffold_0_pi.push_back(myTissue.ip_phif_scaffold_0[ei*IP_size+ipi]);
+                    ip_phif_scaffold_pi.push_back(myTissue.ip_phif_scaffold[ei*IP_size+ipi]);
 					ip_a0_0_pi.push_back(myTissue.ip_a0_0[ei*IP_size+ipi]);
 					ip_a0_pi.push_back(myTissue.ip_a0[ei*IP_size+ipi]);
 					ip_kappa_0_pi.push_back(myTissue.ip_kappa_0[ei*IP_size+ipi]);
@@ -299,9 +304,9 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
             	myTissue.global_parameters,myTissue.local_parameters,
             	node_rho_0_ni,node_c_0_ni,
                 ip_strain_pi, ip_stress_pi,ip_lamdaE_pi,
-                ip_phif_0_pi,ip_a0_0_pi,ip_kappa_0_pi,ip_lamdaP_0_pi,
+                ip_phif_0_pi,ip_phif_scaffold_0_pi,ip_a0_0_pi,ip_kappa_0_pi,ip_lamdaP_0_pi,
             	node_rho_ni, node_c_ni,
-            	ip_phif_pi,ip_a0_pi,ip_kappa_pi,ip_lamdaP_pi,
+            	ip_phif_pi, ip_phif_scaffold_pi,ip_a0_pi,ip_kappa_pi,ip_lamdaP_pi,
             	node_x_ni,
             	Re_x, Ke_x_x, Ke_x_rho, Ke_x_c,
             	Re_rho, Ke_rho_x, Ke_rho_rho, Ke_rho_c,
@@ -319,6 +324,7 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 				// store the new IP values
             	for(int ipi=0;ipi<IP_size;ipi++){
             		myTissue.ip_phif[ei*IP_size+ipi] = ip_phif_pi[ipi];
+                    myTissue.ip_phif_scaffold[ei*IP_size+ipi] = ip_phif_scaffold_pi[ipi];
             		myTissue.ip_a0[ei*IP_size+ipi] = ip_a0_pi[ipi];
             		myTissue.ip_kappa[ei*IP_size+ipi] = ip_kappa_pi[ipi];
             		myTissue.ip_lamdaP[ei*IP_size+ipi] = ip_lamdaP_pi[ipi];
@@ -430,6 +436,7 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 			solver2.compute(KK2);
             if(solver2.info()!=Eigen::Success) {
                 std::cout << "Factorization failed" << "\n";
+                solver_status = false;
                 goto solver_failed;
             }
 			//Use the factors to solve the linear system 
@@ -480,6 +487,7 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 		{
 			for(int IPi=0;IPi<IP_size;IPi++){
 				myTissue.ip_phif_0[elemi*IP_size+IPi] = myTissue.ip_phif[elemi*IP_size+IPi];
+                myTissue.ip_phif_scaffold_0[elemi*IP_size+IPi] = myTissue.ip_phif_scaffold[elemi*IP_size+IPi];
 				myTissue.ip_a0_0[elemi*IP_size+IPi] = myTissue.ip_a0[elemi*IP_size+IPi];
 				myTissue.ip_kappa_0[elemi*IP_size+IPi] = myTissue.ip_kappa[elemi*IP_size+IPi];
 				myTissue.ip_lamdaP_0[elemi*IP_size+IPi] = myTissue.ip_lamdaP[elemi*IP_size+IPi];
@@ -531,7 +539,16 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 	}
 	// FINISH TIME LOOP
     solver_failed:
-    std::cout << "\nSolver failed, moving to next sample.\n";
+    if(solver_status == false){
+        std::cout << "\nSolver failed, moving to next sample.\n";
+        // Store which runs failed
+        success_vector.push_back(0);
+    }
+    else {
+        std::cout << "\nSolver succeeded, moving to next sample.\n";
+        // Store which runs were successful
+        success_vector.push_back(1);
+    }
 }
 
 
@@ -1151,6 +1168,7 @@ void writeParaview(tissue &myTissue, const char* filename, const char* filename2
 	// first bring back from the integration points to the nodes
 	// SCALARS
 	std::vector<double> node_phi(myTissue.n_node,0);
+    std::vector<double> node_phi_scaffold(myTissue.n_node,0);
 	std::vector<double> node_kappa(myTissue.n_node,0);
     // VECTORS
     std::vector<Vector2d> node_a0(myTissue.n_node,Vector2d(0,0));
@@ -1168,6 +1186,7 @@ void writeParaview(tissue &myTissue, const char* filename, const char* filename2
 		for(int ip=0;ip<IP_size;ip++){
 		    if(elem_size == 4){
                 node_phi[myTissue.LineQuadri[elemi][ip]]+=myTissue.ip_phif[elemi*IP_size+ip];
+                node_phi_scaffold[myTissue.LineQuadri[elemi][ip]]+=myTissue.ip_phif_scaffold[elemi*IP_size+ip];
                 node_a0[myTissue.LineQuadri[elemi][ip]]+=myTissue.ip_a0[elemi*IP_size+ip];
                 node_kappa[myTissue.LineQuadri[elemi][ip]]+=myTissue.ip_kappa[elemi*IP_size+ip];
                 node_lamdaP[myTissue.LineQuadri[elemi][ip]]+=myTissue.ip_lamdaP[elemi*IP_size+ip];
@@ -1178,6 +1197,7 @@ void writeParaview(tissue &myTissue, const char* filename, const char* filename2
 		    }
 		    else if(elem_size == 8){
                 node_phi[myTissue.LineQuadri[elemi][ip*2]]+=myTissue.ip_phif[elemi*IP_size+ip];
+                node_phi_scaffold[myTissue.LineQuadri[elemi][ip*2]]+=myTissue.ip_phif_scaffold[elemi*IP_size+ip];
                 node_a0[myTissue.LineQuadri[elemi][ip*2]]+=myTissue.ip_a0[elemi*IP_size+ip];
                 node_kappa[myTissue.LineQuadri[elemi][ip*2]]+=myTissue.ip_kappa[elemi*IP_size+ip];
                 node_lamdaP[myTissue.LineQuadri[elemi][ip*2]]+=myTissue.ip_lamdaP[elemi*IP_size+ip];
@@ -1196,6 +1216,7 @@ void writeParaview(tissue &myTissue, const char* filename, const char* filename2
 	for(int nodei=0;nodei<myTissue.n_node;nodei++){
         //std::cout<<node_ip_count[nodei]<<"\n";
         node_phi[nodei] = node_phi[nodei]/node_ip_count[nodei];
+        node_phi_scaffold[nodei] = node_phi_scaffold[nodei]/node_ip_count[nodei];
         node_a0[nodei] = node_a0[nodei]/node_ip_count[nodei];
         node_kappa[nodei] = node_kappa[nodei]/node_ip_count[nodei];
         node_lamdaP[nodei] = node_lamdaP[nodei]/node_ip_count[nodei];
@@ -1209,10 +1230,10 @@ void writeParaview(tissue &myTissue, const char* filename, const char* filename2
     savefile<<"\n";
 	savefile<<"POINT_DATA "<<myTissue.n_node<<"\nSCALARS rho_c float "<<4<<"\nLOOKUP_TABLE default\n";
     savefile2<<"\n";
-    savefile2<<"POINT_DATA "<<myTissue.n_node<<"\nSCALARS lamdaP_Jp float "<<4<<"\nLOOKUP_TABLE default\n";
+    savefile2<<"POINT_DATA "<<myTissue.n_node<<"\nSCALARS phifscaffold_lamdaPa_lamdaPs float "<<4<<"\nLOOKUP_TABLE default\n";
 	for(int i=0;i<myTissue.n_node;i++){
-		savefile<<  myTissue.node_rho[i] <<" "<<myTissue.node_c[i]<<" "<<node_phi[i]<<" "<< node_kappa[i] <<"\n"; // myTissue.boundary_flag[i]
-        savefile2<<  node_lamdaP[i](0)*node_lamdaP[i](1) << " " << node_lamdaP[i](0)<<" "<<node_lamdaP[i](1)<<" 0\n";
+		savefile<<  myTissue.node_rho[i] <<" "<<myTissue.node_c[i]<<" "<< node_phi[i] <<" "<< node_kappa[i] <<"\n"; // myTissue.boundary_flag[i]
+        savefile2<<  node_phi_scaffold[i] << " " << node_lamdaP[i](0)*node_lamdaP[i](1) << " " << node_lamdaP[i](0)<<" "<<node_lamdaP[i](1)<<"\n";
     }
 	// write out the fiber direction
 	savefile<<"\nVECTORS a0 float\n";

@@ -26,9 +26,9 @@ const std::vector<Matrix2d> &ip_Jac,
 const std::vector<double> &global_parameters,const std::vector<double> &local_parameters,
 const std::vector<double> &node_rho_0, const std::vector<double> &node_c_0,
 std::vector<Matrix2d> &ip_strain, std::vector<Matrix2d> &ip_stress, std::vector<Vector2d> &ip_lamdaE,
-const std::vector<double> &ip_phif_0,const std::vector<Vector2d> &ip_a0_0,const std::vector<double> &ip_kappa_0, const std::vector<Vector2d> &ip_lamdaP_0,
+const std::vector<double> &ip_phif_0,const std::vector<double> &ip_phif_scaffold_0,const std::vector<Vector2d> &ip_a0_0,const std::vector<double> &ip_kappa_0, const std::vector<Vector2d> &ip_lamdaP_0,
 const std::vector<double> &node_rho, const std::vector<double> &node_c,
-std::vector<double> &ip_phif, std::vector<Vector2d> &ip_a0, std::vector<double> &ip_kappa, std::vector<Vector2d> &ip_lamdaP,
+std::vector<double> &ip_phif, std::vector<double> &ip_phif_scaffold, std::vector<Vector2d> &ip_a0, std::vector<double> &ip_kappa, std::vector<Vector2d> &ip_lamdaP,
 const std::vector<Vector2d> &node_x,
 VectorXd &Re_x,MatrixXd &Ke_x_x,MatrixXd &Ke_x_rho,MatrixXd &Ke_x_c,
 VectorXd &Re_rho,MatrixXd &Ke_rho_x, MatrixXd &Ke_rho_rho,MatrixXd &Ke_rho_c,
@@ -89,6 +89,12 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
     double p_c_thetaE = global_parameters[19]; // coupling of elastic and chemical
     double K_c_c = global_parameters[20];// saturation of chem by chem
     double d_c = global_parameters[21]; // decay of chemical
+
+    double k0_scaffold = global_parameters[22]; // Scaffold stiffness parameters
+    double kf_scaffold = global_parameters[23];
+    double k2_scaffold = global_parameters[24];
+    double d_c_phi_rho = global_parameters[25];
+
 	//std::cout<<"read all global parameters\n";
 	//
 	//---------------------------------//
@@ -254,18 +260,21 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		//
         //VectorXd dThetadCC(18);dThetadCC.setZero();
 		VectorXd dThetadCC(24);dThetadCC.setZero();
-		VectorXd dThetadrho(6);dThetadrho.setZero();
-		VectorXd dThetadc(6);dThetadc.setZero();
+		VectorXd dThetadrho(7);dThetadrho.setZero();
+		VectorXd dThetadc(7);dThetadc.setZero();
 		//std::cout<<"Local variables before update:\nphif0 = "<<ip_phif_0[ip]<<"\nkappa_0 = "<<ip_kappa_0[ip]<<"\na0_0 = ["<<ip_a0_0[ip](0)<<","<<ip_a0_0[ip](1)<<"]\nlamdaP_0 = ["<<ip_lamdaP_0[ip](0)<<","<<ip_lamdaP_0[ip](1)<<"]\n";
-		localWoundProblem(dt,local_parameters,c,rho,CC,ip_phif_0[ip],ip_a0_0[ip],ip_kappa_0[ip],ip_lamdaP_0[ip],ip_phif[ip],ip_a0[ip],ip_kappa[ip],ip_lamdaP[ip],dThetadCC,dThetadrho,dThetadc);
+		localWoundProblem(dt,local_parameters,c,rho,CC,ip_phif_0[ip],ip_phif_scaffold_0[ip],ip_a0_0[ip],ip_kappa_0[ip],ip_lamdaP_0[ip],ip_phif[ip],ip_phif_scaffold[ip],ip_a0[ip],ip_kappa[ip],ip_lamdaP[ip],dThetadCC,dThetadrho,dThetadc);
         //localWoundProblemExplicit(dt,local_parameters,c,rho,FF,ip_phif_0[ip],ip_a0_0[ip],ip_kappa_0[ip],ip_lamdaP_0[ip],ip_phif[ip],ip_a0[ip],ip_kappa[ip],ip_lamdaP[ip],dThetadCC,dThetadrho,dThetadc);
 		//
 		// rename variables to make it easier to track
 		double phif_0 = ip_phif_0[ip];
+        double phif_scaffold_0 = ip_phif_scaffold_0[ip];
 		Vector2d a0_0 = ip_a0_0[ip];
 		double kappa_0 = ip_kappa_0[ip];
 		Vector2d lamdaP_0 = ip_lamdaP_0[ip];
 		double phif = ip_phif[ip];
+        double phif_scaffold = ip_phif_scaffold[ip];
+        double phif_total = phif + phif_scaffold;
 		Vector2d a0 = ip_a0[ip];
 		double kappa = ip_kappa[ip];
 		Vector2d lamdaP = ip_lamdaP[ip];
@@ -287,6 +296,7 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
         Matrix2d dkappadCC; dkappadCC.setZero();
         Matrix2d dlamdaP_adCC; dlamdaP_adCC.setZero();
         Matrix2d dlamdaP_sdCC; dlamdaP_sdCC.setZero();
+        Matrix2d dphifscaffolddCC; dphifscaffolddCC.setZero();
 		// remember dThetatCC: 4 phi, 4 a0x, 4 a0y, 4 kappa, 4 lamdaPa, 4 lamdaPs
 		dphifdCC(0,0) = dThetadCC(0);
 		dphifdCC(0,1) = dThetadCC(1);
@@ -312,6 +322,10 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
         dlamdaP_sdCC(0,1) = dThetadCC(21);
         dlamdaP_sdCC(1,0) = dThetadCC(22);
         dlamdaP_sdCC(1,1) = dThetadCC(23);
+        dphifscaffolddCC(0,0) = 0;
+        dphifscaffolddCC(0,1) = 0;
+        dphifscaffolddCC(1,0) = 0;
+        dphifscaffolddCC(1,1) = 0;
 //        for (int II=0; II<3; II++){
 //            int ii = voigt_table_I_i(II);
 //            int jj = voigt_table_I_j(II);
@@ -337,6 +351,7 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		double dkappadrho  = dThetadrho(3);
 		double dlamdaP_adrho  = dThetadrho(4);
 		double dlamdaP_sdrho  = dThetadrho(5);
+        double dphifscaffolddrho = dThetadrho(6);
 		// unpack the derivatives wrt c
 		double dphifdc = dThetadc(0);
 		double da0xdc  = dThetadc(1);
@@ -344,6 +359,7 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		double dkappadc  = dThetadc(3);
 		double dlamdaP_adc  = dThetadc(4);
 		double dlamdaP_sdc  = dThetadc(5);
+        double dphifscaffolddc = dThetadc(6);
 		//
 		//---------------------------------//
 		//std::cout<<"\n"<<dThetadCC<<"\n";
@@ -393,16 +409,19 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		double Psif = (kf/(2.*k2))*(exp( k2*pow((kappa*I1e + (1-2*kappa)*I4e -1),2))-1);
 		double Psif1 = 2*k2*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
 		double Psif4 = 2*k2*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
+        double Psif_scaffold = (kf_scaffold/(2.*k2_scaffold))*(exp( k2_scaffold*pow((kappa*I1e + (1-2*kappa)*I4e -1),2))-1);
+        double Psif1_scaffold = 2*k2_scaffold*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif_scaffold;
+        double Psif4_scaffold = 2*k2_scaffold*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif_scaffold;
 		//Matrix2d SSe_pas = k0*Identity + phif*(Psif1*Identity + Psif4*a0a0);
-        Matrix2d SSe_pas = k0*Identity + phif*(Psif1*Identity + Psif4*a0a0);
+        Matrix2d SSe_pas = phif*(k0*Identity + Psif1*Identity + Psif4*a0a0) + phif_scaffold*(k0_scaffold*Identity + Psif1_scaffold*Identity + Psif4_scaffold*a0a0);
 		// pull back to the reference
 		Matrix2d SS_pas = thetaP*FFginv*SSe_pas*FFginv;
 		// magnitude from systems bio
 		double traction_act = (t_rho + t_rho_c*c/(K_t_c + c))*rho;
 		//Matrix2d SS_act = (thetaP*traction_act*phif/trA)*A0;
-        Matrix2d SS_act = (thetaP*traction_act*phif/(trA*(K_t*K_t+phif*phif)))*A0;
+        Matrix2d SS_act = (thetaP*traction_act*phif_total/(trA*(K_t*K_t+phif_total*phif_total)))*A0;
 		// total stress, don't forget the pressure
-		double pressure = -k0*lamda_N*lamda_N;
+		double pressure = -(phif*k0 + phif_scaffold*k0_scaffold)*lamda_N*lamda_N;
 		Matrix2d SS_pres = pressure*thetaP*CCinv;
 		//std::cout<<"stresses.\nSSpas\n"<<SS_pas<<"\nSS_act\n"<<SS_act<<"\nSS_pres"<<SS_pres<<"\n";
 		//Matrix2d SS = SS_pas + SS_pres + SS_act;
@@ -410,15 +429,16 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
         ip_stress[ip] = SS;
 		Vector3d SS_voigt = Vector3d(SS(0,0),SS(1,1),SS(0,1));
 		// Flux and Source terms for the rho and the C
-		Vector2d Q_rho = -D_rhorho*CCinv*Grad_rho - D_rhoc*rho*CCinv*Grad_c;
-		Vector2d Q_c = -D_cc*CCinv*Grad_c;
-        //Vector2d Q_rho = -3*(D_rhorho-phif*(D_rhorho-D_rhorho/10))*A0*Grad_rho/trA - 3*(D_rhoc-phif*(D_rhoc-D_rhoc/10))*rho*A0*Grad_c/trA;
-        //Vector2d Q_c = -3*(D_cc-phif*(D_cc-D_cc/10))*A0*Grad_c/trA;
+//		Vector2d Q_rho = -D_rhorho*CCinv*Grad_rho - D_rhoc*rho*CCinv*Grad_c;
+//		Vector2d Q_c = -D_cc*CCinv*Grad_c;
+        Vector2d Q_rho = -3*(D_rhorho-phif_total*(D_rhorho-D_rhorho/10))*A0*Grad_rho/trA - 3*(D_rhoc-phif_total*(D_rhoc-D_rhoc/10))*rho*A0*Grad_c/trA;
+        Vector2d Q_c = -3*(D_cc-phif_total*(D_cc-D_cc/10))*A0*Grad_c/trA;
 		// mechanosensing 
 		double He = 1./(1.+exp(-gamma_theta*(thetaE - vartheta_e)));
 		double S_rho = (p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(1-rho/K_rho_rho)*rho - d_rho*rho;
 		// heviside function for elastic response of the chemical
-		double S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - d_c*c;
+		//double S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - d_c*c;
+        double S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - (d_c + d_c_phi_rho*phif*rho)*c;
 		//std::cout<<"flux of celss, Q _rho\n"<<Q_rho<<"\n";
 		//std::cout<<"source of cells, S_rho: "<<S_rho<<"\n";
 		//std::cout<<"flux of chemical, Q _c\n"<<Q_c<<"\n";
@@ -470,6 +490,8 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		// structural parameters
 		double phif_plus = phif + epsilon;
 		double phif_minus= phif - epsilon;
+        double phif_scaffold_plus = phif_scaffold + epsilon;
+        double phif_scaffold_minus= phif_scaffold - epsilon;
 		Vector2d a0_plus_x= a0 + epsilon*Ebasis[0];
 		Vector2d a0_minus_x = a0 - epsilon*Ebasis[0];
 		Vector2d a0_plus_y= a0 + epsilon*Ebasis[1];
@@ -489,17 +511,26 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		double S_c_plus,S_c_minus;
 		//
 		// phif
-		evalFluxesSources(global_parameters,phif_plus,a0,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
-		evalFluxesSources(global_parameters,phif_minus,a0,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
+		evalFluxesSources(global_parameters,phif_plus,phif_scaffold,a0,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
+		evalFluxesSources(global_parameters,phif_minus,phif_scaffold,a0,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
 		Matrix2d dSSdphif = (1./(2.*epsilon))*(SS_plus-SS_minus);
 		Vector2d dQ_rhodphif = (1./(2.*epsilon))*(Q_rho_plus-Q_rho_minus);
 		Vector2d dQ_cdphif = (1./(2.*epsilon))*(Q_c_plus-Q_c_minus);
 		double dS_rhodphif = (1./(2.*epsilon))*(S_rho_plus-S_rho_minus);
 		double dS_cdphif = (1./(2.*epsilon))*(S_c_plus-S_c_minus);		
 		//
+        // phif_scaffold
+        evalFluxesSources(global_parameters,phif,phif_scaffold_plus,a0,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
+        evalFluxesSources(global_parameters,phif,phif_scaffold_minus,a0,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
+        Matrix2d dSSdphif_scaffold = (1./(2.*epsilon))*(SS_plus-SS_minus);
+        Vector2d dQ_rhodphif_scaffold = (1./(2.*epsilon))*(Q_rho_plus-Q_rho_minus);
+        Vector2d dQ_cdphif_scaffold = (1./(2.*epsilon))*(Q_c_plus-Q_c_minus);
+        double dS_rhodphif_scaffold = (1./(2.*epsilon))*(S_rho_plus-S_rho_minus);
+        double dS_cdphif_scaffold = (1./(2.*epsilon))*(S_c_plus-S_c_minus);
+        //
 		// a0x
-		evalFluxesSources(global_parameters,phif,a0_plus_x,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
-		evalFluxesSources(global_parameters,phif,a0_minus_x,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0_plus_x,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0_minus_x,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
 		Matrix2d dSSda0x = (1./(2.*epsilon))*(SS_plus-SS_minus);
 		Vector2d dQ_rhoda0x = (1./(2.*epsilon))*(Q_rho_plus-Q_rho_minus);
 		Vector2d dQ_cda0x = (1./(2.*epsilon))*(Q_c_plus-Q_c_minus);
@@ -507,8 +538,8 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		double dS_cda0x = (1./(2.*epsilon))*(S_c_plus-S_c_minus);		
 		//
 		// a0y
-		evalFluxesSources(global_parameters,phif,a0_plus_y,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
-		evalFluxesSources(global_parameters,phif,a0_minus_y,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0_plus_y,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0_minus_y,kappa,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
 		Matrix2d dSSda0y = (1./(2.*epsilon))*(SS_plus-SS_minus);
 		Vector2d dQ_rhoda0y = (1./(2.*epsilon))*(Q_rho_plus-Q_rho_minus);
 		Vector2d dQ_cda0y = (1./(2.*epsilon))*(Q_c_plus-Q_c_minus);
@@ -516,8 +547,8 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		double dS_cda0y = (1./(2.*epsilon))*(S_c_plus-S_c_minus);		
 		//
 		// kappa
-		evalFluxesSources(global_parameters,phif,a0,kappa_plus,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
-		evalFluxesSources(global_parameters,phif,a0,kappa_minus,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0,kappa_plus,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0,kappa_minus,lamdaP,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
 		Matrix2d dSSdkappa = (1./(2.*epsilon))*(SS_plus-SS_minus);
 		Vector2d dQ_rhodkappa = (1./(2.*epsilon))*(Q_rho_plus-Q_rho_minus);
 		Vector2d dQ_cdkappa = (1./(2.*epsilon))*(Q_c_plus-Q_c_minus);
@@ -525,8 +556,8 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		double dS_cdkappa = (1./(2.*epsilon))*(S_c_plus-S_c_minus);		
 		//
 		// lamdaP_a
-		evalFluxesSources(global_parameters,phif,a0,kappa,lamdaP_plus_a,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
-		evalFluxesSources(global_parameters,phif,a0,kappa,lamdaP_minus_a,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP_plus_a,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP_minus_a,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
 		Matrix2d dSSdlamdaPa = (1./(2.*epsilon))*(SS_plus-SS_minus);
 		Vector2d dQ_rhodlamdaPa = (1./(2.*epsilon))*(Q_rho_plus-Q_rho_minus);
 		Vector2d dQ_cdlamdaPa = (1./(2.*epsilon))*(Q_c_plus-Q_c_minus);
@@ -534,8 +565,8 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		double dS_cdlamdaPa = (1./(2.*epsilon))*(S_c_plus-S_c_minus);		
 		//
 		// lamdaP_s
-		evalFluxesSources(global_parameters,phif,a0,kappa,lamdaP_plus_s,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
-		evalFluxesSources(global_parameters,phif,a0,kappa,lamdaP_minus_s,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP_plus_s,FF,rho,c,Grad_rho,Grad_c, SS_plus,Q_rho_plus,S_rho_plus,Q_c_plus,S_c_plus);
+		evalFluxesSources(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP_minus_s,FF,rho,c,Grad_rho,Grad_c, SS_minus,Q_rho_minus,S_rho_minus,Q_c_minus,S_c_minus);
 		Matrix2d dSSdlamdaPs = (1./(2.*epsilon))*(SS_plus-SS_minus);
 		Vector2d dQ_rhodlamdaPs = (1./(2.*epsilon))*(Q_rho_plus-Q_rho_minus);
 		Vector2d dQ_cdlamdaPs = (1./(2.*epsilon))*(Q_c_plus-Q_c_minus);
@@ -549,12 +580,29 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		//---------------------------------//
 		// MECHANICS TANGENT
 		//
-		double Psif11 = 2*k2*kappa*kappa*Psif+2*k2*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif1 ;
-		double Psif14 = 2*k2*kappa*(1-2*kappa)*I4e*Psif + 2*k2*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif4;
+//        double Psif = (kf/(2.*k2))*(exp( k2*pow((kappa*I1e + (1-2*kappa)*I4e -1),2))-1);
+//        double Psif1 = 2*k2*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
+//        double Psif4 = 2*k2*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
+//        double Psif_scaffold = (kf_scaffold/(2.*k2_scaffold))*(exp( k2_scaffold*pow((kappa*I1e + (1-2*kappa)*I4e -1),2))-1);
+//        double Psif1_scaffold = 2*k2_scaffold*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif_scaffold;
+//        double Psif4_scaffold = 2*k2_scaffold*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif_scaffold;
+		// Matrix2d SSe_pas = phif*(k0*Identity + Psif1*Identity + Psif4*a0a0) + phif_scaffold*(k0_scaffold*Identity + Psif1_scaffold*Identity + Psif4_scaffold*a0a0);
+
+		// I4e?
+
+		double Psif11 = 2*k2*kappa*kappa*Psif + 2*k2*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif1 ;
+		double Psif14 = 2*k2*kappa*(1-2*kappa)*Psif + 2*k2*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif4;
 		double Psif41 = 2*k2*(1-2*kappa)*kappa*Psif + 2*k2*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif1;
 		double Psif44 = 2*k2*(1-2*kappa)*(1-2*kappa)*Psif + 2*k2*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif4;
-		std::vector<double> dSSpasdCC_explicit(16,0.);				
-		int ii,jj,kk,ll,pp,rr,ss,tt;
+
+        double Psif11_scaffold = 2*k2_scaffold*kappa*kappa*Psif_scaffold + 2*k2_scaffold*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif1_scaffold ;
+        double Psif14_scaffold = 2*k2_scaffold*kappa*(1-2*kappa)*Psif_scaffold + 2*k2_scaffold*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif4_scaffold;
+        double Psif41_scaffold = 2*k2_scaffold*(1-2*kappa)*kappa*Psif_scaffold + 2*k2_scaffold*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif1_scaffold;
+        double Psif44_scaffold = 2*k2_scaffold*(1-2*kappa)*(1-2*kappa)*Psif_scaffold + 2*k2_scaffold*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif4_scaffold;
+
+		std::vector<double> dSSpasdCC_explicit(16,0.);
+        std::vector<double> dSSpasdCC_explicit_3D(16,0.);
+        int ii,jj,kk,ll,pp,rr,ss,tt;
 		for(ii=0;ii<2;ii++){
 			for(jj=0;jj<2;jj++){
 				for(kk=0;kk<2;kk++){
@@ -563,9 +611,19 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 							for(rr=0;rr<2;rr++){
 								for(ss=0;ss<2;ss++){
 									for(tt=0;tt<2;tt++){
-										dSSpasdCC_explicit[ii*8+jj*4+kk*2+ll] += theta*theta/2.*FFginv(ii,pp)*(FFginv(ss,kk)*FFginv(ll,tt)+FFginv(ss,ll)*FFginv(kk,tt))*FFginv(rr,jj)*(
-																phif*(Psif11*Identity(pp,rr)*Identity(ss,tt) + Psif14*Identity(pp,rr)*a0a0(ss,tt)
-															  +Psif41*a0a0(pp,rr)*Identity(ss,tt) + Psif44*a0a0(pp,rr)*a0a0(ss,tt)));
+//                                        dSSpasdCC_explicit[ii*8+jj*4+kk*2+ll] += thetaP*(
+//										                phif*(Psif11*Identity(pp,rr)*Identity(ss,tt) + Psif14*Identity(pp,rr)*a0a0(ss,tt)
+//															  +Psif41*a0a0(pp,rr)*Identity(ss,tt) + Psif44*a0a0(pp,rr)*a0a0(ss,tt)) +
+//                                                        phif_scaffold*(Psif11_scaffold*Identity(pp,rr)*Identity(ss,tt) + Psif14_scaffold*Identity(pp,rr)*a0a0(ss,tt)
+//                                                                +Psif41_scaffold*a0a0(pp,rr)*Identity(ss,tt) + Psif44_scaffold*a0a0(pp,rr)*a0a0(ss,tt))
+//                                                                )*FFginv(ii,pp)*FFginv(jj,rr)*FFginv(kk,ss)*FFginv(ll,tt);
+
+                                        dSSpasdCC_explicit_3D[ii*8+jj*4+kk*2+ll] += theta*theta/2.*FFginv(ii,pp)*(FFginv(ss,kk)*FFginv(ll,tt)+FFginv(ss,ll)*FFginv(kk,tt))*FFginv(rr,jj)*(
+                                                phif*(Psif11*Identity(pp,rr)*Identity(ss,tt) + Psif14*Identity(pp,rr)*a0a0(ss,tt)
+                                                      +Psif41*a0a0(pp,rr)*Identity(ss,tt) + Psif44*a0a0(pp,rr)*a0a0(ss,tt)) +
+                                                phif_scaffold*(Psif11_scaffold*Identity(pp,rr)*Identity(ss,tt) + Psif14_scaffold*Identity(pp,rr)*a0a0(ss,tt)
+                                                               +Psif41_scaffold*a0a0(pp,rr)*Identity(ss,tt) + Psif44_scaffold*a0a0(pp,rr)*a0a0(ss,tt))
+                                                                                );
 
 //                                        dSSpasdCC_explicit[ii*8+jj*4+kk*2+ll] += theta*theta/2.*FFginv(ii,pp)*(FFginv(ss,kk)*FFginv(ll,tt)+FFginv(ss,ll)*FFginv(kk,tt))*FFginv(rr,jj)*(
 //                                                (Psif11*Identity(pp,rr)*Identity(ss,tt) + Psif14*Identity(pp,rr)*a0a0(ss,tt)
@@ -583,14 +641,14 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		// some things needed first
 		// only derivatives with respect to CC explicitly
 		Matrix2d dthetadCC = 0.5*theta*CCinv;	
-		Matrix2d dpresdCC = 2*k0*lamda_N*thetaP/(theta*theta)*dthetadCC;
+		Matrix2d dpresdCC = 2*(phif*k0 + phif_scaffold*k0_scaffold)*lamda_N*thetaP/(theta*theta)*dthetadCC;
 		Matrix2d dtrAdCC = kappa*Identity + (1-2*kappa)*a0a0;
-		Matrix3d DDpres,DDpas,DDact,DDstruct,DDtot;
+		Matrix3d DDpres,DDpas,DDpas3D,DDact,DDstruct,DDtot;
 		
 		//--------------------------------------------------//		
 		// CHECKING
-		//Matrix2d CC_p,CC_m,SSpas_p,SSpas_m,SSpres_p,SSpres_m,SSact_p,SSact_m;
-		//Matrix3d DDpres_num,DDpas_num,DDact_num;
+		Matrix2d CC_p,CC_m,SSpas_p,SSpas_m,SSpres_p,SSpres_m,SSact_p,SSact_m;
+		Matrix3d DDpres_num,DDpas_num,DDact_num;
 		//--------------------------------------------------//		
 		
 		for(int II=0;II<3;II++){
@@ -606,42 +664,43 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 				
 				// passive, explicit only
 				DDpas(II,JJ) = dSSpasdCC_explicit[ii*8+jj*4+kk*2+ll];
+                DDpas3D(II,JJ) = dSSpasdCC_explicit_3D[ii*8+jj*4+kk*2+ll];
 				
 				// active , explicit only
-				DDact(II,JJ) = -1.0*phif*traction_act*thetaP/(trA*trA*(K_t*K_t+phif*phif))*dtrAdCC(kk,ll)*A0(ii,jj);
-				
+				DDact(II,JJ) = -1.0*phif_total*traction_act*thetaP/(trA*trA*(K_t*K_t+phif_total*phif_total))*dtrAdCC(kk,ll)*A0(ii,jj);
+
 				// structural
-				DDstruct(II,JJ) = dSSdphif(ii,jj)*dphifdCC(kk,ll) + dSSda0x(ii,jj)*da0xdCC(kk,ll)+ dSSda0y(ii,jj)*da0ydCC(kk,ll)
+				DDstruct(II,JJ) = dSSdphif(ii,jj)*dphifdCC(kk,ll) + dSSdphif_scaffold(ii,jj)*dphifscaffolddCC(kk,ll) + dSSda0x(ii,jj)*da0xdCC(kk,ll)+ dSSda0y(ii,jj)*da0ydCC(kk,ll)
 								+dSSdkappa(ii,jj)*dkappadCC(kk,ll)+dSSdlamdaPa(ii,jj)*dlamdaP_adCC(kk,ll)+dSSdlamdaPs(ii,jj)*dlamdaP_sdCC(kk,ll);
-				
-				// TOTAL. now include the structural parameters
-				DDtot(II,JJ) = DDpres(II,JJ)+DDpas(II,JJ)+DDact(II,JJ)+DDstruct(II,JJ);
-                //DDtot(II,JJ) = DDpres(II,JJ)+ phif*(DDpas(II,JJ)) + DDact(II,JJ) + DDstruct(II,JJ);
+
 				
 				//--------------------------------------------------//		
 				// CHECKING
 				// the pressure, explicit only, means
-				//CC_p = CC + 0.5*epsilon*Ebasis[kk]*Ebasis[ll].transpose()+ 0.5*epsilon*Ebasis[ll]*Ebasis[kk].transpose();
-				//CC_m = CC - 0.5*epsilon*Ebasis[kk]*Ebasis[ll].transpose()- 0.5*epsilon*Ebasis[ll]*Ebasis[kk].transpose();
-				//evalSS(global_parameters,phif,a0,kappa,lamdaP_a,lamdaP_s,CC_p,rho,c,SSpas_p,SSact_p,SSpres_p);
-				//evalSS(global_parameters,phif,a0,kappa,lamdaP_a,lamdaP_s,CC_m,rho,c,SSpas_m,SSact_m,SSpres_m);
-				//DDpas_num(II,JJ) = (1./(2.0*epsilon))*(SSpas_p(ii,jj)-SSpas_m(ii,jj));
-				//DDpres_num(II,JJ) = (1./(2.0*epsilon))*(SSpres_p(ii,jj)-SSpres_m(ii,jj));
-				//DDact_num(II,JJ) = (1./(2.0*epsilon))*(SSact_p(ii,jj)-SSact_m(ii,jj));
+				CC_p = CC + 0.5*epsilon*Ebasis[kk]*Ebasis[ll].transpose()+ 0.5*epsilon*Ebasis[ll]*Ebasis[kk].transpose();
+				CC_m = CC - 0.5*epsilon*Ebasis[kk]*Ebasis[ll].transpose()- 0.5*epsilon*Ebasis[ll]*Ebasis[kk].transpose();
+				evalSS(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP_a,lamdaP_s,CC_p,rho,c,SSpas_p,SSact_p,SSpres_p);
+				evalSS(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP_a,lamdaP_s,CC_m,rho,c,SSpas_m,SSact_m,SSpres_m);
+				DDpas_num(II,JJ) = (1./(2.0*epsilon))*(SSpas_p(ii,jj)-SSpas_m(ii,jj));
+				DDpres_num(II,JJ) = (1./(2.0*epsilon))*(SSpres_p(ii,jj)-SSpres_m(ii,jj));
+				DDact_num(II,JJ) = (1./(2.0*epsilon))*(SSact_p(ii,jj)-SSact_m(ii,jj));
 				//--------------------------------------------------//		
-				
+                DDpas = DDpas_num;
+
+                // TOTAL. now include the structural parameters
+                DDtot(II,JJ) = DDpres(II,JJ)+DDpas(II,JJ)+DDact(II,JJ)+DDstruct(II,JJ);
+                //DDtot(II,JJ) = DDpres(II,JJ)+ phif*(DDpas(II,JJ)) + DDact(II,JJ) + DDstruct(II,JJ);
 			}
 		}
 		
 		//--------------------------------------------------//		
 		// CHECKING
-		//std::cout<<"\n"<<DDact<<"\n"<<DDpas<<"\n";
-		//std::cout<<"comparing\nDD_pas\n";
-		//std::cout<<DDpas<<"\nDD_pas_num\n"<<DDpas_num<<"\n";
-		//std::cout<<"comparing\nDD_pres\n";
-		//std::cout<<DDpres<<"\nDD_pres_num\n"<<DDpres_num<<"\n";
-		//std::cout<<"comparing\nDD_act\n";
-		//std::cout<<DDact<<"\nDD_act_num\n"<<DDact_num<<"\n";
+//		std::cout<<"comparing\nDD_pas\n";
+//		std::cout<<DDpas<<"\nDD_pas_3D\n"<<DDpas3D<<"\nDD_pas_num\n"<<DDpas_num<<"\n";
+//		std::cout<<"comparing\nDD_pres\n";
+//		std::cout<<DDpres<<"\nDD_pres_num\n"<<DDpres_num<<"\n";
+//		std::cout<<"comparing\nDD_act\n";
+//		std::cout<<DDact<<"\nDD_act_num\n"<<DDact_num<<"\n";
 		//
 		//--------------------------------------------------//		
 		
@@ -649,15 +708,15 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		//
 		double dtractiondrho = (t_rho + t_rho_c*c/(K_t_c + c));
 		// Matrix2d dSSdrho_explicit = (thetaP*dtractiondrho*phif/trA)*(kappa*Identity+(1-2*kappa)*a0a0);
-		Matrix2d dSSdrho_explicit = (thetaP*dtractiondrho*phif/(trA*(K_t*K_t+phif*phif)))*(kappa*Identity+(1-2*kappa)*a0a0);
-		Matrix2d dSSdrho = dSSdrho_explicit + dSSdphif*dphifdrho + dSSda0x*da0xdrho + dSSda0y*da0ydrho
+		Matrix2d dSSdrho_explicit = (thetaP*dtractiondrho*phif_total/(trA*(K_t*K_t+phif_total*phif_total)))*(kappa*Identity+(1-2*kappa)*a0a0);
+		Matrix2d dSSdrho = dSSdrho_explicit + dSSdphif*dphifdrho + dSSdphif_scaffold*dphifscaffolddrho + dSSda0x*da0xdrho + dSSda0y*da0ydrho
 							+dSSdkappa*dkappadrho + dSSdlamdaPa*dlamdaP_adrho + dSSdlamdaPs*dlamdaP_sdrho;
 		Vector3d dSSdrho_voigt(dSSdrho(0,0),dSSdrho(1,1),dSSdrho(0,1));
 		//Matrix2d dsigma_actdc = phif*(t_rho_c/(K_t_c + c)-t_rho_c*c/pow((K_t_c + c),2))*rho*hat_A;
 		double dtractiondc = (t_rho_c/(K_t_c + c)-t_rho_c*c/pow((K_t_c + c),2))*rho;
 		//Matrix2d dSSdc_explicit = (thetaP*dtractiondc*phif/trA)*(kappa*Identity+(1-2*kappa)*a0a0);
-        Matrix2d dSSdc_explicit = (thetaP*dtractiondc*phif/(trA*(K_t*K_t+phif*phif)))*(kappa*Identity+(1-2*kappa)*a0a0);
-		Matrix2d dSSdc = dSSdc_explicit + dSSdphif*dphifdc + dSSda0x*da0xdc + dSSda0y*da0ydc
+        Matrix2d dSSdc_explicit = (thetaP*dtractiondc*phif_total/(trA*(K_t*K_t+phif_total*phif_total)))*(kappa*Identity+(1-2*kappa)*a0a0);
+		Matrix2d dSSdc = dSSdc_explicit + dSSdphif*dphifdc + dSSdphif_scaffold*dphifscaffolddc + dSSda0x*da0xdc + dSSda0y*da0ydc
 							+dSSdkappa*dkappadc + dSSdlamdaPa*dlamdaP_adc + dSSdlamdaPs*dlamdaP_sdc;							
 		Vector3d dSSdc_voigt(dSSdc(0,0),dSSdc(1,1),dSSdc(0,1));
 		//
@@ -714,8 +773,44 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 		//-----------------//
 		// RHO and C
 		//-----------------//
-		
-		// Derivatives of flux and source terms wrt CC, rho, and C
+
+        //std::cout<<"\ndQ_rhodCC_voigt\n"<<dQ_rhodCC_voigt<<"\ndQ_cdCC_voigt\n"<<dQ_cdCC_voigt<<"\n";
+		// explicit linearizations. In this case no dependence on structural parameters.
+        Matrix2d linQ_rhodGradrho = -3*(D_rhorho-phif_total*(D_rhorho-D_rhorho/10))*A0/trA;
+        Vector2d linQ_rhodrho = -3*(D_rhoc-phif_total*(D_rhoc-D_rhoc/10))*A0*Grad_c/trA;
+        Matrix2d linQ_rhodGradc = -3*(D_rhoc-phif_total*(D_rhoc-D_rhoc/10))*rho*A0/trA;
+        Matrix2d linQ_cdGradc = -3*(D_cc-phif_total*(D_cc-D_cc/10))*A0/trA;
+//        Matrix2d linQ_rhodGradrho = -D_rhorho*CCinv;
+//        Vector2d linQ_rhodrho = -D_rhoc*CCinv*Grad_c;
+//        Matrix2d linQ_rhodGradc = -D_rhoc*rho*CCinv;
+//        Matrix2d linQ_cdGradc = -D_cc*CCinv;
+		//
+		// explicit derivatives of source terms
+		double dS_rhodrho_explicit = (p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(1-rho/K_rho_rho) - d_rho + rho*(p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(-1./K_rho_rho);
+		double dS_rhodc_explicit = (1-rho/K_rho_rho)*rho*(p_rho_c/(K_rho_c+c) - p_rho_c*c/((K_rho_c+c)*(K_rho_c+c)));
+		double dS_cdrho_explicit = (p_c_rho*c + p_c_thetaE*He)*(1./(K_c_c+c)) - (d_c_phi_rho*phif)*c;
+		double dS_cdc_explicit = -(d_c + d_c_phi_rho*rho*phif) + (p_c_rho*c + p_c_thetaE*He)*(-rho/((K_c_c+c)*(K_c_c+c))) + (rho/(K_c_c+c))*p_c_rho;
+		// total derivatives
+		double dS_rhodrho = dS_rhodrho_explicit + dS_rhodphif*dphifdrho + dS_rhodphif_scaffold*dphifscaffolddrho + dS_rhoda0x*da0xdrho + dS_rhoda0y*da0ydrho
+							+dS_rhodkappa*dkappadrho+dS_rhodlamdaPa*dlamdaP_adrho+dS_rhodlamdaPs*dlamdaP_sdrho;
+		double dS_rhodc = dS_rhodc_explicit + dS_rhodphif*dphifdc + dS_rhodphif_scaffold*dphifscaffolddc + dS_rhoda0x*da0xdc + dS_rhoda0y*da0ydc
+							+dS_rhodkappa*dkappadc+dS_rhodlamdaPa*dlamdaP_adc+dS_rhodlamdaPs*dlamdaP_sdc;
+		double dS_cdrho = dS_cdrho_explicit + dS_cdphif*dphifdrho + dS_cdphif_scaffold*dphifscaffolddrho + dS_cda0x*da0xdrho + dS_cda0y*da0ydrho
+							+dS_cdkappa*dkappadrho+dS_cdlamdaPa*dlamdaP_adrho+dS_cdlamdaPs*dlamdaP_sdrho;							
+		double dS_cdc = dS_cdc_explicit + dS_cdphif*dphifdc + dS_cdphif_scaffold*dphifscaffolddc + dS_cda0x*da0xdc + dS_cda0y*da0ydc
+							+dS_cdkappa*dkappadc+dS_cdlamdaPa*dlamdaP_adc+dS_cdlamdaPs*dlamdaP_sdc;
+		// wrt Mechanics
+		Matrix2d dHedCC_explicit = -1./pow((1.+exp(-gamma_theta*(thetaE - vartheta_e))),2)*(exp(-gamma_theta*(thetaE - vartheta_e)))*(-gamma_theta)*(1./thetaP)*(dthetadCC);
+		Matrix2d dS_rhodCC_explicit = (1-rho/K_rho_rho)*rho*p_rho_theta*dHedCC_explicit;
+		Matrix2d dS_cdCC_explicit = (rho/(K_c_c+c))*(p_c_thetaE*dHedCC_explicit);
+		Matrix2d dS_rhodCC = dS_rhodCC_explicit + dS_rhodphif*dphifdCC + dS_rhodphif_scaffold*dphifscaffolddCC + dS_rhoda0x*da0xdCC + dS_rhoda0y*da0ydCC
+							+dS_rhodkappa*dkappadCC+dS_rhodlamdaPa*dlamdaP_adCC+dS_rhodlamdaPs*dlamdaP_sdCC;
+		Vector3d dS_rhodCC_voigt(dS_rhodCC(0,0),dS_rhodCC(1,1),dS_rhodCC(0,1));
+		Matrix2d dS_cdCC = dS_cdCC_explicit + dS_cdphif*dphifdCC + dS_cdphif_scaffold*dphifscaffolddCC + dS_cda0x*da0xdCC + dS_cda0y*da0ydCC
+							+dS_cdkappa*dkappadCC+dS_cdlamdaPa*dlamdaP_adCC+dS_cdlamdaPs*dlamdaP_sdCC;
+		Vector3d dS_cdCC_voigt(dS_cdCC(0,0),dS_cdCC(1,1),dS_cdCC(0,1));
+
+        // Derivatives of flux and source terms wrt CC, rho, and C
         std::vector<double> dQ_rhodCC_explicit(8,0.);
         std::vector<double> dQ_cdCC_explicit(8,0.);
         for(int ii=0;ii<2;ii++) {
@@ -723,20 +818,32 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
                 for(int kk=0;kk<2;kk++) {
                     for(int ll=0;ll<2;ll++) {
                         // These are third order tensors, but there are two contractions from matrix multiplication
-//                        dQ_rhodCC_explicit[ii*4+kk*2+ll] += -1.0*(-3*(D_rhorho-phif*(D_rhorho-D_rhorho/10))*A0(ii,jj)*Grad_rho(jj)
-//                                                                  - 3*(D_rhoc-phif*(D_rhoc-D_rhoc/10))*rho*A0(ii,jj)*Grad_c(jj))*dtrAdCC(kk,ll) / (trA*trA);
+                        dQ_rhodCC_explicit[ii*4+kk*2+ll] += -1.0*(-3*(D_rhorho-phif_total*(D_rhorho-D_rhorho/10))*A0(ii,jj)*Grad_rho(jj)
+                                                                  - 3*(D_rhoc-phif_total*(D_rhoc-D_rhoc/10))*rho*A0(ii,jj)*Grad_c(jj))*dtrAdCC(kk,ll) / (trA*trA);
+
+                        dQ_cdCC_explicit[ii*4+kk*2+ll] += -1.0*(-3*(D_cc-phif_total*(D_cc-D_cc/10))*A0(ii,jj)*Grad_c(jj))
+                                                          *dtrAdCC(kk,ll)/(trA*trA);
+
+//                        dQ_rhodCC_explicit[ii*4+kk*2+ll] += -1.0*(-0.5)*D_rhorho*(CCinv(ii,kk)*CCinv(jj,ll)+CCinv(jj,kk)*CCinv(ii,ll))*Grad_rho(jj)
+//                                                            -1.0*(-0.5)*D_cc*rho*(CCinv(ii,kk)*CCinv(jj,ll)+CCinv(jj,kk)*CCinv(ii,ll))*Grad_c(jj);
 //
-//                        dQ_cdCC_explicit[ii*4+kk*2+ll] += -1.0*(-3*(D_cc-phif*(D_cc-D_cc/10))*A0(ii,jj)*Grad_c(jj))
-//                                                          *dtrAdCC(kk,ll)/(trA*trA);
-
-                        dQ_rhodCC_explicit[ii*4+kk*2+ll] += -1.0*(-0.5)*D_rhorho*(CCinv(ii,kk)*CCinv(jj,ll)+CCinv(jj,kk)*CCinv(ii,ll))*Grad_rho(jj)
-                                                            -1.0*(-0.5)*D_cc*rho*(CCinv(ii,kk)*CCinv(jj,ll)+CCinv(jj,kk)*CCinv(ii,ll))*Grad_c(jj);
-
-                        dQ_cdCC_explicit[ii*4+kk*2+ll] += -1.0*(-0.5)*D_cc*(CCinv(ii,kk)*CCinv(jj,ll)+CCinv(jj,kk)*CCinv(ii,ll))*Grad_c(jj);
+//                        dQ_cdCC_explicit[ii*4+kk*2+ll] += -1.0*(-0.5)*D_cc*(CCinv(ii,kk)*CCinv(jj,ll)+CCinv(jj,kk)*CCinv(ii,ll))*Grad_c(jj);
                     }
                 }
             }
         }
+
+        //--------------------------------------------------//
+        // CHECKING
+//        MatrixXd dQ_rhodCC_voigt_num(2,3); dQ_rhodCC_voigt_num.setZero();
+//        MatrixXd dQ_cdCC_voigt_num(2,3); dQ_cdCC_voigt_num.setZero();
+//        Vector2d Q_rho_p; Q_rho_p.setZero(); Vector2d Q_rho_m; Q_rho_m.setZero();
+//        Vector2d Q_c_p; Q_c_p.setZero(); Vector2d Q_c_m; Q_c_m.setZero();
+//        VectorXd dS_rhodCC_voigt_num(3); dS_rhodCC_voigt_num.setZero();
+//        VectorXd dS_cdCC_voigt_num(3); dS_cdCC_voigt_num.setZero();
+//        double S_rho_p, S_rho_m, S_c_p, S_c_m;
+        //--------------------------------------------------//
+
         // Put into a Voigt form (2x3)
         MatrixXd dQ_rhodCC_voigt(2,3); dQ_rhodCC_voigt.setZero();
         MatrixXd dQ_cdCC_voigt(2,3); dQ_cdCC_voigt.setZero();
@@ -748,52 +855,47 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
                 int kk = voigt_table_J_k(JJ);
                 int ll = voigt_table_J_l(JJ);
 
-                dQ_rhodCC_voigt(II,JJ) = dQ_rhodCC_explicit[ii*4+kk*2+ll] + dQ_rhodphif(ii)*dphifdCC(kk,ll)
+                dQ_rhodCC_voigt(II,JJ) = dQ_rhodCC_explicit[ii*4+kk*2+ll] + dQ_rhodphif(ii)*dphifdCC(kk,ll) + dQ_rhodphif_scaffold(ii)*dphifscaffolddCC(kk,ll)
                                          + dQ_rhoda0x(ii)*da0xdCC(kk,ll) + dQ_rhoda0y(ii)*da0ydCC(kk,ll)
                                          +dQ_rhodkappa(ii)*dkappadCC(kk,ll) + dQ_rhodlamdaPa(ii)*dlamdaP_adCC(kk,ll)
                                          + dQ_rhodlamdaPs(ii)*dlamdaP_sdCC(kk,ll);
 
-                dQ_cdCC_voigt(II,JJ) = dQ_cdCC_explicit[ii*4+kk*2+ll] + dQ_cdphif(ii)*dphifdCC(kk,ll)
+                dQ_cdCC_voigt(II,JJ) = dQ_cdCC_explicit[ii*4+kk*2+ll] + dQ_cdphif(ii)*dphifdCC(kk,ll) + dQ_cdphif_scaffold(ii)*dphifscaffolddCC(kk,ll)
                                        + dQ_cda0x(ii)*da0xdCC(kk,ll) + dQ_cda0y(ii)*da0ydCC(kk,ll)
                                        +dQ_cdkappa(ii)*dkappadCC(kk,ll) + dQ_cdlamdaPa(ii)*dlamdaP_adCC(kk,ll)
                                        + dQ_cdlamdaPs(ii)*dlamdaP_sdCC(kk,ll);
+
+                //--------------------------------------------------//
+                // CHECKING
+                // Numerical Solutions
+//                CC_p = CC + 0.5*epsilon*Ebasis[kk]*Ebasis[ll].transpose() + 0.5*epsilon*Ebasis[ll]*Ebasis[kk].transpose();
+//                CC_m = CC - 0.5*epsilon*Ebasis[kk]*Ebasis[ll].transpose() - 0.5*epsilon*Ebasis[ll]*Ebasis[kk].transpose();
+//                evalQ(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP,CC_p,rho,c,Grad_rho,Grad_c,Q_rho_p,Q_c_p);
+//                evalQ(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP,CC_m,rho,c,Grad_rho,Grad_c,Q_rho_m,Q_c_m);
+//                evalS(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP,CC_p,rho,c,S_rho_p,S_c_p);
+//                evalS(global_parameters,phif,phif_scaffold,a0,kappa,lamdaP,CC_m,rho,c,S_rho_m,S_c_m);
+//                dQ_rhodCC_voigt_num(II,JJ) = (1./(2.0*epsilon))*(Q_rho_p(ii)-Q_rho_m(ii));
+//                dQ_cdCC_voigt_num(II,JJ) = (1./(2.0*epsilon))*(Q_c_p(ii)-Q_c_m(ii));
+//                dS_rhodCC_voigt_num(JJ) = (1./(2.0*epsilon))*(S_rho_p-S_rho_m);
+//                dS_cdCC_voigt_num(JJ) = (1./(2.0*epsilon))*(S_c_p-S_c_m);
+                //--------------------------------------------------//
             }
         }
-        //std::cout<<"\ndQ_rhodCC_voigt\n"<<dQ_rhodCC_voigt<<"\ndQ_cdCC_voigt\n"<<dQ_cdCC_voigt<<"\n";
-		// explicit linearizations. In this case no dependence on structural parameters.
-        //Matrix2d linQ_rhodGradrho = -3*(D_rhorho-phif*(D_rhorho-D_rhorho/10))*A0/trA;
-        //Vector2d linQ_rhodrho = -3*(D_rhoc-phif*(D_rhoc-D_rhoc/10))*A0*Grad_c/trA;
-        //Matrix2d linQ_rhodGradc = -3*(D_rhoc-phif*(D_rhoc-D_rhoc/10))*rho*A0/trA;
-        //Matrix2d linQ_cdGradc = -3*(D_cc-phif*(D_cc-D_cc/10))*A0/trA;
-        Matrix2d linQ_rhodGradrho = -D_rhorho*CCinv;
-        Vector2d linQ_rhodrho = -D_rhoc*CCinv*Grad_c;
-        Matrix2d linQ_rhodGradc = -D_rhoc*rho*CCinv;
-        Matrix2d linQ_cdGradc = -D_cc*CCinv;
-		//
-		// explicit derivatives of source terms
-		double dS_rhodrho_explicit = (p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(1-rho/K_rho_rho) - d_rho + rho*(p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(-1./K_rho_rho);
-		double dS_rhodc_explicit = (1-rho/K_rho_rho)*rho*(p_rho_c/(K_rho_c+c) - p_rho_c*c/((K_rho_c+c)*(K_rho_c+c)));
-		double dS_cdrho_explicit = (p_c_rho*c + p_c_thetaE*He)*(1./(K_c_c+c));
-		double dS_cdc_explicit = -d_c + (p_c_rho*c + p_c_thetaE*He)*(-rho/((K_c_c+c)*(K_c_c+c))) + (rho/(K_c_c+c))*p_c_rho;
-		// total derivatives
-		double dS_rhodrho = dS_rhodrho_explicit + dS_rhodphif*dphifdrho + dS_rhoda0x*da0xdrho + dS_rhoda0y*da0ydrho
-							+dS_rhodkappa*dkappadrho+dS_rhodlamdaPa*dlamdaP_adrho+dS_rhodlamdaPs*dlamdaP_sdrho;
-		double dS_rhodc = dS_rhodc_explicit + dS_rhodphif*dphifdc + dS_rhoda0x*da0xdc + dS_rhoda0y*da0ydc
-							+dS_rhodkappa*dkappadc+dS_rhodlamdaPa*dlamdaP_adc+dS_rhodlamdaPs*dlamdaP_sdc;
-		double dS_cdrho = dS_cdrho_explicit + dS_cdphif*dphifdrho + dS_cda0x*da0xdrho + dS_cda0y*da0ydrho
-							+dS_cdkappa*dkappadrho+dS_cdlamdaPa*dlamdaP_adrho+dS_cdlamdaPs*dlamdaP_sdrho;							
-		double dS_cdc = dS_cdc_explicit + dS_cdphif*dphifdc + dS_cda0x*da0xdc + dS_cda0y*da0ydc
-							+dS_cdkappa*dkappadc+dS_cdlamdaPa*dlamdaP_adc+dS_cdlamdaPs*dlamdaP_sdc;
-		// wrt Mechanics
-		Matrix2d dHedCC_explicit = -1./pow((1.+exp(-gamma_theta*(thetaE - vartheta_e))),2)*(exp(-gamma_theta*(thetaE - vartheta_e)))*(-gamma_theta)*(1./thetaP)*(dthetadCC);
-		Matrix2d dS_rhodCC_explicit = (1-rho/K_rho_rho)*rho*p_rho_theta*dHedCC_explicit;
-		Matrix2d dS_cdCC_explicit = (rho/(K_c_c+c))*(p_c_thetaE*dHedCC_explicit);
-		Matrix2d dS_rhodCC = dS_rhodCC_explicit + dS_rhodphif*dphifdCC + dS_rhoda0x*da0xdCC + dS_rhoda0y*da0ydCC
-							+dS_rhodkappa*dkappadCC+dS_rhodlamdaPa*dlamdaP_adCC+dS_rhodlamdaPs*dlamdaP_sdCC;
-		Vector3d dS_rhodCC_voigt(dS_rhodCC(0,0),dS_rhodCC(1,1),dS_rhodCC(0,1));
-		Matrix2d dS_cdCC = dS_cdCC_explicit + dS_cdphif*dphifdCC + dS_cda0x*da0xdCC + dS_cda0y*da0ydCC
-							+dS_cdkappa*dkappadCC+dS_cdlamdaPa*dlamdaP_adCC+dS_cdlamdaPs*dlamdaP_sdCC;
-		Vector3d dS_cdCC_voigt(dS_cdCC(0,0),dS_cdCC(1,1),dS_cdCC(0,1));
+
+        //--------------------------------------------------//
+        // CHECKING
+        // PRINT COMPARISON WITH NUMERICAL
+//        std::cout<<"\ncomparing\ndQ_rhodCC_voigt\n";
+//        std::cout<<dQ_rhodCC_voigt<<"\ndQ_rhodCC_voigt_num\n"<<dQ_rhodCC_voigt_num<<"\n";
+//        std::cout<<"comparing\ndQ_cdCC_voigt\n";
+//        std::cout<<dQ_cdCC_voigt<<"\ndQ_cdCC_voigt_num\n"<<dQ_cdCC_voigt_num<<"\n";
+//        std::cout<<"comparing\ndS_rhodCC_voigt\n";
+//        std::cout<<dS_rhodCC_voigt<<"\ndS_rhodCC_voigt_num\n"<<dS_rhodCC_voigt_num<<"\n";
+//        std::cout<<"comparing\ndS_cdCC_voigt\n";
+//        std::cout<<dS_cdCC_voigt<<"\ndS_cdCC_voigt_num\n"<<dS_cdCC_voigt_num<<"\n";
+        //
+        //--------------------------------------------------//
+
 		//		
 		for(int nodei=0;nodei<n_nodes;nodei++){
 			for(int nodej=0;nodej<n_nodes;nodej++){
@@ -853,7 +955,7 @@ VectorXd &Re_c,MatrixXd &Ke_c_x,MatrixXd &Ke_c_rho,MatrixXd &Ke_c_c)
 
 // Sources and Fluxes are :stress, biological fluxes and sources
 
-void evalFluxesSources(const std::vector<double> &global_parameters, double phif,Vector2d a0,double kappa,Vector2d lamdaP,
+void evalFluxesSources(const std::vector<double> &global_parameters, double phif, double phif_scaffold,Vector2d a0,double kappa,Vector2d lamdaP,
 Matrix2d FF,double rho, double c, Vector2d Grad_rho, Vector2d Grad_c,
 Matrix2d & SS,Vector2d &Q_rho,double &S_rho, Vector2d &Q_c,double &S_c)
 {
@@ -879,7 +981,12 @@ Matrix2d & SS,Vector2d &Q_rho,double &S_rho, Vector2d &Q_c,double &S_c)
     double p_c_thetaE = global_parameters[19]; // coupling of elastic and chemical
     double K_c_c = global_parameters[20];// saturation of chem by chem
     double d_c = global_parameters[21]; // decay of chemical
+    double k0_scaffold = global_parameters[22]; // Scaffold stiffness parameters
+    double kf_scaffold = global_parameters[23];
+    double k2_scaffold = global_parameters[24];
+    double d_c_phi_rho = global_parameters[25];
 
+    double phif_total = phif + phif_scaffold;
 	Matrix2d CC = FF.transpose()*FF;
 	Matrix2d CCinv = CC.inverse();
 	Matrix2d Identity;Identity<<1.,0.,0.,1.;
@@ -915,27 +1022,30 @@ Matrix2d & SS,Vector2d &Q_rho,double &S_rho, Vector2d &Q_c,double &S_c)
 	double Psif = (kf/(2.*k2))*(exp( k2*pow((kappa*I1e + (1-2*kappa)*I4e -1),2))-1);
 	double Psif1 = 2*k2*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
 	double Psif4 = 2*k2*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
-	//Matrix2d SSe_pas = k0*Identity + phif*(Psif1*Identity + Psif4*a0a0);
-    Matrix2d SSe_pas = k0*Identity + phif*(Psif1*Identity + Psif4*a0a0);
+    double Psif_scaffold = (kf_scaffold/(2.*k2_scaffold))*(exp( k2_scaffold*pow((kappa*I1e + (1-2*kappa)*I4e -1),2))-1);
+    double Psif1_scaffold = 2*k2_scaffold*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif_scaffold;
+    double Psif4_scaffold = 2*k2_scaffold*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif_scaffold;
+    //Matrix2d SSe_pas = k0*Identity + phif*(Psif1*Identity + Psif4*a0a0);
+    Matrix2d SSe_pas = phif*(k0*Identity + Psif1*Identity + Psif4*a0a0) + phif_scaffold*(k0_scaffold*Identity + Psif1_scaffold*Identity + Psif4_scaffold*a0a0);
 	// pull back to the reference
 	Matrix2d SS_pas = thetaP*FFginv*SSe_pas*FFginv;
 	// magnitude from systems bio
 	double traction_act = (t_rho + t_rho_c*c/(K_t_c + c))*rho;
 	//Matrix2d SS_act = (thetaP*traction_act*phif/trA)*(kappa*Identity+(1-2*kappa)*a0a0);
-	Matrix2d SS_act = (thetaP*traction_act*phif/(trA*(K_t*K_t+phif*phif)))*A0;
+	Matrix2d SS_act = (thetaP*traction_act*phif_total/(trA*(K_t*K_t+phif_total*phif_total)))*A0;
 	// total stress, don't forget the pressure
-	double pressure = -k0*lamda_N*lamda_N;
+	double pressure = -(phif*k0 + phif_scaffold*k0_scaffold)*lamda_N*lamda_N;
 	Matrix2d SS_pres = pressure*thetaP*CCinv;
 	//SS = SS_pas + SS_act + SS_pres;
     SS = (SS_pas) + SS_pres + SS_act;
 	// Flux and Source terms for the rho and the C
-	Q_rho = -D_rhorho*CCinv*Grad_rho - D_rhoc*rho*CCinv*Grad_c;
-	Q_c = -D_cc*CCinv*Grad_c;
-    //Q_rho = -3*(D_rhorho-phif*(D_rhorho-D_rhorho/10))*A0*Grad_rho/trA - 3*(D_rhoc-phif*(D_rhoc-D_rhoc/10))*rho*A0*Grad_c/trA;
-    //Q_c = -3*(D_cc-phif*(D_cc-D_cc/10))*A0*Grad_c/trA;
+//	Q_rho = -D_rhorho*CCinv*Grad_rho - D_rhoc*rho*CCinv*Grad_c;
+//	Q_c = -D_cc*CCinv*Grad_c;
+    Q_rho = -3*(D_rhorho-phif_total*(D_rhorho-D_rhorho/10))*A0*Grad_rho/trA - 3*(D_rhoc-phif_total*(D_rhoc-D_rhoc/10))*rho*A0*Grad_c/trA;
+    Q_c = -3*(D_cc-phif_total*(D_cc-D_cc/10))*A0*Grad_c/trA;
 	double He = 1./(1.+exp(-gamma_theta*(thetaE - vartheta_e)));
 	S_rho = (p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(1-rho/K_rho_rho)*rho - d_rho*rho;
-	S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - d_c*c;
+	S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - (d_c + d_c_phi_rho*rho*phif)*c;
 }
 
 
@@ -948,8 +1058,8 @@ Matrix2d & SS,Vector2d &Q_rho,double &S_rho, Vector2d &Q_c,double &S_c)
 void localWoundProblem(
 double dt, const std::vector<double> &local_parameters,
 double c,double rho,const Matrix2d &CC,
-double phif_0, const Vector2d &a0_0, double kappa_0, const Vector2d &lamdaP_0,
-double &phif, Vector2d &a0, double &kappa, Vector2d &lamdaP,
+double phif_0, double phif_scaffold_0, const Vector2d &a0_0, double kappa_0, const Vector2d &lamdaP_0,
+double &phif, double &phif_scaffold, Vector2d &a0, double &kappa, Vector2d &lamdaP,
 VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 {
 
@@ -1002,6 +1112,11 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	// solution parameters
 	double tol_local = local_parameters[14]; // local tolerance
 	double max_local_iter = local_parameters[15]; // max local iter
+
+	// Scaffold parameters
+    double d_phi_scaffold = local_parameters[16];
+    double d_phi_rho_c_scaffold = local_parameters[17];
+
 	//
 	// other local stuff
 	Matrix2d Identity;Identity<<1.,0.,0.,1.;
@@ -1022,6 +1137,9 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	//
 	// initial guess for local newton
 	phif = phif_0;
+    phif_scaffold = phif_scaffold_0;
+    double phif_total = phif + phif_scaffold;
+    double phif_total_0 = phif_0 + phif_scaffold_0;
 	// make sure it is unit length
 	a0 = a0_0/(sqrt(a0_0.dot(a0_0)));
 	kappa = kappa_0;
@@ -1041,9 +1159,9 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	Ebasis.push_back(Vector2d(1,0)); Ebasis.push_back(Vector2d(0,1));
 	//
 	// residual
-	VectorXd RR_local(6);
-	double R_phif,R_kappa; Vector2d R_lamdaP,R_a0;
-	double phif_dot_plus,phif_dot;
+	VectorXd RR_local(7);
+	double R_phif,R_phif_scaffold,R_kappa; Vector2d R_lamdaP,R_a0;
+	double phif_dot_plus,phif_dot, phif_scaffold_dot;
 	Vector2d s0;
 	double Ce_aa,Ce_ss,Ce_as,lamda0, lamda1, sinVartheta,omega;
 	Matrix2d Romega; Vector2d Rot_a0_0;
@@ -1052,19 +1170,19 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	Vector2d lamdaP_dot;
 	//
 	// tangent
-	MatrixXd KK_local(6,6);
+	MatrixXd KK_local(7,7);
 	double dtheta_edlamdaP_a,dtheta_edlamdaP_s;
 	double dH_thetadlamdaP_a,dH_thetadlamdaP_s;
-	double dRphifdphif,dRphifdlamdaP_a,dRphifdlamdaP_s;
+	double dRphifdphif,dRphifdphif_scaffold,dRphifdlamdaP_a,dRphifdlamdaP_s;
 	Vector2d dphifplusdlamdaP;
-	Vector2d dRa0dphif; Matrix2d dRa0da0, dRa0dlamdaP;
-	double dRkappadphif,dRkappadkappa;
-	Vector2d dRkappada0, dRkappadlamdaP,dRlamdaPdphif;
+	Vector2d dRa0dphif, dRa0dphif_scaffold; Matrix2d dRa0da0, dRa0dlamdaP;
+	double dRkappadphif,dRkappadphif_scaffold,dRkappadkappa;
+	Vector2d dRkappada0, dRkappadlamdaP,dRlamdaPdphif,dRlamdaPdphif_scaffold;
 	Vector2d dRlamdaPada0, dRlamdaPsda0;
-	double dRlamdaPadlamdaPa,dRlamdaPadlamdaPs,dRlamdaPsdlamdaPa,dRlamdaPsdlamdaPs;
-	double dphifplusdphif;
+	double dRlamdaPadlamdaPa,dRlamdaPadlamdaPs,dRlamdaPsdlamdaPa,dRlamdaPsdlamdaPs, dRphif_scaffolddphif_scaffold;
+	double dphifplusdphif, dphifplusdphif_scaffold;
 	Matrix2d dRomegadomega ;
-	double domegadphif;
+	double domegadphif, domegadphif_scaffold;
 	Vector2d dCe_aada0,dCe_ssda0,dCe_asda0;
 	double dCe_aada0x,dCe_aada0y,dCe_ssda0x,dCe_ssda0y,dCe_asda0x,dCe_asda0y;
 	Vector2d dlamda1da0, dlamda0da0,dsinVarthetada0,domegada0;
@@ -1076,7 +1194,7 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	Vector2d dlamda1dlamdaP,dlamda0dlamdaP;
 	Vector2d dsinVarthetadlamdaP, domegadlamdaP;
 	//
-	VectorXd SOL_local(6);
+	VectorXd SOL_local(7);
 	//
 	//---------------------------------//
 	
@@ -1102,7 +1220,7 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		H_theta = 1./(1+exp(-gamma_theta*(theta_e-vartheta_e)));
 		if(H_theta<0.002){H_theta=0;}
 		//std::cout<<"H_theta: "<<H_theta<<"\n";
-		phif_dot_plus = (p_phi + (p_phi_c*c)/(K_phi_c+c)+p_phi_theta*H_theta)*(rho/(K_phi_rho+phif));
+		phif_dot_plus = (p_phi + (p_phi_c*c)/(K_phi_c+c)+p_phi_theta*H_theta)*(rho/(K_phi_rho+phif_total));
 		//std::cout<<"phidotplus: "<<phif_dot_plus<<"\n";
 		phif_dot = phif_dot_plus - (d_phi + c*rho*d_phi_rho_c)*phif;
 		R_phif = (-phif + phif_0)/dt + phif_dot;
@@ -1187,6 +1305,10 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		lamdaP_dot(0) = phif_dot_plus*(lamdaE_a-1)/tau_lamdaP_a;
 		lamdaP_dot(1) = phif_dot_plus*(lamdaE_s-1)/tau_lamdaP_s;
 		R_lamdaP= (1./dt)*(-lamdaP +lamdaP_0) + lamdaP_dot;
+
+		// Scaffold density
+        phif_scaffold_dot = - (d_phi_scaffold + c*rho*d_phi_rho_c_scaffold)*phif_scaffold;
+        R_phif_scaffold = (-phif_scaffold + phif_scaffold_0)/dt + phif_scaffold_dot;
 		
 		// Assemble into the residual vector
 		RR_local(0) = R_phif;
@@ -1195,7 +1317,8 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		RR_local(3) = R_kappa;
 		RR_local(4) = R_lamdaP(0);
 		RR_local(5) = R_lamdaP(1);
-		
+        RR_local(6) = R_phif_scaffold;
+
 		//----------//
 		// TANGENT
 		//----------//
@@ -1204,8 +1327,8 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		
 		// Tangent of phif
 		// derivative of the phifdotplus
-		dphifplusdphif = (p_phi + (p_phi_c*c)/(K_phi_c+c)+p_phi_theta*H_theta)*(-rho/((K_phi_rho+phif)*(K_phi_rho+phif)));
-		dRphifdphif = -1./dt + dphifplusdphif - d_phi;
+		dphifplusdphif = (p_phi + (p_phi_c*c)/(K_phi_c+c)+p_phi_theta*H_theta)*(-rho/((K_phi_rho+phif_total)*(K_phi_rho+phif_total)));
+		dRphifdphif = -1./dt + dphifplusdphif - (d_phi + c*rho*d_phi_rho_c);
 		dtheta_edlamdaP_a = -theta/(lamdaP(0)*lamdaP(0)*lamdaP(1));
 		dtheta_edlamdaP_s = -theta/(lamdaP(0)*lamdaP(1)*lamdaP(1));
 		dH_thetadlamdaP_a = -1.0*H_theta*H_theta*exp(-gamma_theta*(theta_e-vartheta_e))*(-gamma_theta*(dtheta_edlamdaP_a));
@@ -1213,7 +1336,9 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		dRphifdlamdaP_a = p_phi_theta*dH_thetadlamdaP_a*(rho/(K_phi_rho+phif));
 		dRphifdlamdaP_s = p_phi_theta*dH_thetadlamdaP_s*(rho/(K_phi_rho+phif));
 		dphifplusdlamdaP =Vector2d(p_phi_theta*dH_thetadlamdaP_a*(rho/(K_phi_rho+phif)),p_phi_theta*dH_thetadlamdaP_s*(rho/(K_phi_rho+phif)));
-		
+        dphifplusdphif_scaffold = (p_phi + (p_phi_c*c)/(K_phi_c+c)+p_phi_theta*H_theta)*(-rho/((K_phi_rho+phif_total)*(K_phi_rho+phif_total)));
+        dRphifdphif_scaffold = dphifplusdphif_scaffold;
+
 		//std::cout<<"Collagen fraction tangent.\n";
 		//std::cout<<"dphifplusdphif = "<<dphifplusdphif<<"\n";
 		//std::cout<<"dRphifdphif = "<<dRphifdphif<<"\n";
@@ -1227,6 +1352,12 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		//domegadphif = -(2.*PIE*dphifplusdphif)*lamda1*sinVartheta*sinVartheta/(tau_omega);
 		// chain rule for derivative of residual wrt phif
 		dRa0dphif = (-dRomegadomega*a0_0)*domegadphif;
+
+        // derivative of the omega angular velocity wrt phif
+        domegadphif_scaffold = (2.*PIE*dphifplusdphif_scaffold)*lamda1*sinVartheta/(tau_omega);
+        //domegadphif = -(2.*PIE*dphifplusdphif)*lamda1*sinVartheta*sinVartheta/(tau_omega);
+        // chain rule for derivative of residual wrt phif
+        dRa0dphif_scaffold = (-dRomegadomega*a0_0)*domegadphif_scaffold;
 
 		// derivative of R_a0 wrt to a0 needs some pre-calculations
 		// derivatives of Ce wrt a0
@@ -1437,6 +1568,7 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		
 		// Tangent of dispersion
 		dRkappadphif = (1./tau_kappa)*(pow(lamda0/lamda1,gamma_kappa)/2.-kappa)*dphifplusdphif;
+        dRkappadphif_scaffold = (1./tau_kappa)*(pow(lamda0/lamda1,gamma_kappa)/2.-kappa)*dphifplusdphif_scaffold;
 		dRkappada0 =(phif_dot_plus/tau_kappa)*((gamma_kappa/2.)*pow(lamda0/lamda1,gamma_kappa-1))*((1./lamda1)*dlamda0da0-(lamda0/(lamda1*lamda1))*dlamda1da0);
 		dRkappadkappa = -1/dt - (phif_dot_plus/tau_kappa);
 		dRkappadlamdaP = (phif_dot_plus/tau_kappa)*((gamma_kappa/2.)*pow(lamda0/lamda1,gamma_kappa-1))*((1./lamda1)*dlamda0dlamdaP-(lamda0/(lamda1*lamda1))*dlamda1dlamdaP)+(dphifplusdlamdaP/tau_kappa)*( pow(lamda0/lamda1,gamma_kappa)/2.  -kappa);
@@ -1446,6 +1578,9 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		dRlamdaPdphif.setZero();
 		dRlamdaPdphif(0) = ((lamdaE_a-1.)/tau_lamdaP_a)*dphifplusdphif;
 		dRlamdaPdphif(1) = ((lamdaE_s-1.)/tau_lamdaP_s)*dphifplusdphif;
+        dRlamdaPdphif.setZero();
+        dRlamdaPdphif_scaffold(0) = ((lamdaE_a-1.)/tau_lamdaP_a)*dphifplusdphif_scaffold;
+        dRlamdaPdphif_scaffold(1) = ((lamdaE_s-1.)/tau_lamdaP_s)*dphifplusdphif_scaffold;
 		// derivative wrt fiber direction
 		dRlamdaPada0 = (phif_dot_plus/tau_lamdaP_a)*(1./(2*lamdaE_a*lamdaE_a))*dCe_aada0;
 		dRlamdaPsda0 = (phif_dot_plus/tau_lamdaP_s)*(1./(2*lamdaE_s*lamdaE_s))*dCe_ssda0;
@@ -1455,19 +1590,26 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		dRlamdaPadlamdaPs = 		    (phif_dot_plus/tau_lamdaP_a)*(1./(2*lamdaE_a*lamdaE_a))*dCe_aadlamdaP(1)+dphifplusdlamdaP(1)*(lamdaE_a-1)/tau_lamdaP_a;
 		dRlamdaPsdlamdaPa = 		    (phif_dot_plus/tau_lamdaP_s)*(1./(2*lamdaE_s*lamdaE_s))*dCe_ssdlamdaP(0)+dphifplusdlamdaP(0)*(lamdaE_s-1)/tau_lamdaP_s;
 		dRlamdaPsdlamdaPs = -1./dt + (phif_dot_plus/tau_lamdaP_s)*(1./(2*lamdaE_s*lamdaE_s))*dCe_ssdlamdaP(1)+dphifplusdlamdaP(1)*(lamdaE_s-1)/tau_lamdaP_s;
-		
+
+		// Scaffold density
+        // Tangent of phif_scaffold
+        // derivative of the phifdotplus
+        dRphif_scaffolddphif_scaffold = -1./dt - (d_phi + c*rho*d_phi_rho_c_scaffold);
+
 		// Assemble into the tangent matrix.
 		// phif
-		KK_local(0,0) = dRphifdphif;  KK_local(0,4) = dRphifdlamdaP_a;  KK_local(0,5) = dRphifdlamdaP_s;
-		// a0
-		KK_local(1,0) = dRa0dphif(0); KK_local(1,1) = dRa0da0(0,0);KK_local(1,2) = dRa0da0(0,1); KK_local(1,4) = dRa0dlamdaP(0,0);KK_local(1,5) = dRa0dlamdaP(0,1);
-		KK_local(2,0) = dRa0dphif(1); KK_local(2,1) = dRa0da0(1,0);KK_local(2,2) = dRa0da0(1,1); KK_local(2,4) = dRa0dlamdaP(1,0);KK_local(2,5) = dRa0dlamdaP(1,1);
+		KK_local(0,0) = dRphifdphif;  KK_local(0,4) = dRphifdlamdaP_a;  KK_local(0,5) = dRphifdlamdaP_s; KK_local(0,6) = dRphifdphif_scaffold;
+        // a0
+		KK_local(1,0) = dRa0dphif(0); KK_local(1,1) = dRa0da0(0,0);KK_local(1,2) = dRa0da0(0,1); KK_local(1,4) = dRa0dlamdaP(0,0);KK_local(1,5) = dRa0dlamdaP(0,1); KK_local(1,6) = dRa0dphif_scaffold(0);
+        KK_local(2,0) = dRa0dphif(1); KK_local(2,1) = dRa0da0(1,0);KK_local(2,2) = dRa0da0(1,1); KK_local(2,4) = dRa0dlamdaP(1,0);KK_local(2,5) = dRa0dlamdaP(1,1); KK_local(2,6) = dRa0dphif_scaffold(1);
 		// kappa
-		KK_local(3,0) = dRkappadphif; KK_local(3,1) = dRkappada0(0);KK_local(3,2) = dRkappada0(1);KK_local(3,3) = dRkappadkappa; KK_local(3,4) = dRkappadlamdaP(0);KK_local(3,5) = dRkappadlamdaP(1);
+		KK_local(3,0) = dRkappadphif; KK_local(3,1) = dRkappada0(0);KK_local(3,2) = dRkappada0(1);KK_local(3,3) = dRkappadkappa; KK_local(3,4) = dRkappadlamdaP(0);KK_local(3,5) = dRkappadlamdaP(1); KK_local(3,6) = dRkappadphif_scaffold;
 		// lamdaP
-		KK_local(4,0) = dRlamdaPdphif(0);KK_local(4,1) = dRlamdaPada0(0);KK_local(4,2) = dRlamdaPada0(1); KK_local(4,4) =dRlamdaPadlamdaPa; KK_local(4,5) =dRlamdaPadlamdaPs;
-		KK_local(5,0) = dRlamdaPdphif(1);KK_local(5,1) = dRlamdaPsda0(0);KK_local(5,2) = dRlamdaPsda0(1); KK_local(5,4) =dRlamdaPsdlamdaPa; KK_local(5,5) =dRlamdaPsdlamdaPs;
-		
+		KK_local(4,0) = dRlamdaPdphif(0);KK_local(4,1) = dRlamdaPada0(0);KK_local(4,2) = dRlamdaPada0(1); KK_local(4,4) =dRlamdaPadlamdaPa; KK_local(4,5) =dRlamdaPadlamdaPs; KK_local(4,6) = dRlamdaPdphif_scaffold(0);
+		KK_local(5,0) = dRlamdaPdphif(1);KK_local(5,1) = dRlamdaPsda0(0);KK_local(5,2) = dRlamdaPsda0(1); KK_local(5,4) =dRlamdaPsdlamdaPa; KK_local(5,5) =dRlamdaPsdlamdaPs; KK_local(5,6) = dRlamdaPdphif_scaffold(1);
+		// phif_scaffold
+		KK_local(6,6) = dRphif_scaffolddphif_scaffold;
+
 		//----------//
 		// SOLVE
 		//----------//
@@ -1488,19 +1630,20 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		kappa += SOL_local(3);
 		lamdaP(0) += SOL_local(4);
 		lamdaP(1) += SOL_local(5);
+        phif_scaffold += SOL_local(6);
 		// normalize a0
 		a0 = a0/sqrt(a0.dot(a0));
 		//std::cout<<"norm(RR): "<<residuum<<"\n";
 		//std::cout<<"norm(SOL): "<<normSOL<<"\n";
 		iter += 1;
-//		if(normRR > 1e-4 && iter == max_local_iter){
-//			std::cout<<"no local convergence\nlamda1: "<<lamda1<<", lamda0: "<<lamda0<<", lamdaP:"<<lamdaP(0)<<","<<lamdaP(1)<<",a0:"<<a0(0)<<","<<a0(1)<<"Ce_aa: "<<Ce_aa<<","<<Ce_as<<","<<Ce_ss<<"\n";
-//			std::cout<<"Ce-lamda:"<<fabs(lamda1-Ce_aa)<<"\n";
-//			std::cout<<"aux"<<aux00<<"\n";
-//			std::cout<<"sinVartheta: "<<sinVartheta<<"\n";
-//			std::cout<<"Res\n"<<RR_local<<"\nSOL_local\n"<<SOL_local<<"\n";
-//			//throw std::runtime_error("sorry pal ");
-//		}
+		if(normRR > 1e-4 && iter == max_local_iter){
+			std::cout<<"no local convergence\nlamda1: "<<lamda1<<", lamda0: "<<lamda0<<", lamdaP:"<<lamdaP(0)<<","<<lamdaP(1)<<",a0:"<<a0(0)<<","<<a0(1)<<"Ce_aa: "<<Ce_aa<<","<<Ce_as<<","<<Ce_ss<<"\n";
+			std::cout<<"Ce-lamda:"<<fabs(lamda1-Ce_aa)<<"\n";
+			std::cout<<"aux"<<aux00<<"\n";
+			std::cout<<"sinVartheta: "<<sinVartheta<<"\n";
+			std::cout<<"Res\n"<<RR_local<<"\nSOL_local\n"<<SOL_local<<"\n";
+			//throw std::runtime_error("sorry pal ");
+		}
 		
 	} // END OF WHILE LOOP OF LOCAL NEWTON
 	//a0 = a0/sqrt(a0.dot(a0));
@@ -1535,8 +1678,8 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	Matrix2d dRphifdCC;dRphifdCC.setZero(); 
 	double dH_thetadtheta = -1.*H_theta*H_theta*exp(-gamma_theta*(theta_e-vartheta_e))*(-gamma_theta/(lamdaP(0)*lamdaP(1)));
 	Matrix2d dthetadCC = (1./2)*theta*CCinv;
-	dRphifdCC = p_phi_theta*dH_thetadtheta*(rho/(K_phi_rho+phif))*dthetadCC;
-	Matrix2d dphifdotplusdCC = p_phi_theta*dH_thetadtheta*(rho/(K_phi_rho+phif))*dthetadCC;
+	dRphifdCC = p_phi_theta*dH_thetadtheta*(rho/(K_phi_rho+phif_total))*dthetadCC;
+	Matrix2d dphifdotplusdCC = p_phi_theta*dH_thetadtheta*(rho/(K_phi_rho+phif_total))*dthetadCC;
 	
 	// a0
 	// preprocessing
@@ -1564,10 +1707,13 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	Matrix2d dRlamdaP_sdCC;
 	dRlamdaP_adCC = (phif_dot_plus/tau_lamdaP_a)*(1./(2*lamdaE_a))*dCe_aadCC+dphifdotplusdCC*(lamdaE_a-1.)/tau_lamdaP_a;
 	dRlamdaP_sdCC = (phif_dot_plus/tau_lamdaP_s)*(1./(2*lamdaE_s))*dCe_ssdCC+dphifdotplusdCC*(lamdaE_s-1.)/tau_lamdaP_s;
-	
+
+	// phif_scaffold
+	// All zero!
+
 	// Assemble dRThetadCC
-	// count is phi=4, a0x = 4, a0y = 4, kappa = 4, lamdaP_a =4, lamdaP_s = 4
-	VectorXd dRThetadCC(24);dRThetadCC.setZero();
+	// count is phi=4, a0x = 4, a0y = 4, kappa = 4, lamdaP_a =4, lamdaP_s = 4, phif_scaffold = 4
+	VectorXd dRThetadCC(28);dRThetadCC.setZero();
 	// phi
 	dRThetadCC(0) = dRphifdCC(0,0); dRThetadCC(1) = dRphifdCC(0,1); dRThetadCC(2) = dRphifdCC(1,0); dRThetadCC(3) = dRphifdCC(1,1);
 	// a0x 
@@ -1583,7 +1729,7 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	
 	// Assemble KK_local_extended
 	
-	MatrixXd dRThetadTheta_ext(24,24);dRThetadTheta_ext.setZero();
+	MatrixXd dRThetadTheta_ext(28,28);dRThetadTheta_ext.setZero();
 	for(int kkj=0;kkj<6;kkj++){
 		// phi
 		dRThetadTheta_ext(0,kkj*4+0) = KK_local(0,kkj);
@@ -1615,6 +1761,11 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		dRThetadTheta_ext(21,kkj*4+1) = KK_local(5,kkj);
 		dRThetadTheta_ext(22,kkj*4+2) = KK_local(5,kkj);
 		dRThetadTheta_ext(23,kkj*4+3) = KK_local(5,kkj);
+        // phif_scaffold
+        dRThetadTheta_ext(24,kkj*4+0) = KK_local(6,kkj);
+        dRThetadTheta_ext(25,kkj*4+1) = KK_local(6,kkj);
+        dRThetadTheta_ext(26,kkj*4+2) = KK_local(6,kkj);
+        dRThetadTheta_ext(27,kkj*4+3) = KK_local(6,kkj);
 	}
 	
 	// SOLVE for the dThetadCC
@@ -1629,8 +1780,8 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	// Explicit derivatives of the residuals with respect to rho
 	
 	// phi
-	double dRphidrho = (p_phi + (p_phi_c*c)/(K_phi_c+c)+p_phi_theta*H_theta)*(1./(K_phi_rho+phif)) - d_phi_rho_c*c*phif;
-	double dphif_dot_plusdrho = (p_phi + (p_phi_c*c)/(K_phi_c+c)+p_phi_theta*H_theta)*(1./(K_phi_rho+phif));
+	double dRphidrho = (p_phi + (p_phi_c*c)/(K_phi_c+c)+p_phi_theta*H_theta)*(1./(K_phi_rho+phif_total)) - d_phi_rho_c*c*phif;
+	double dphif_dot_plusdrho = (p_phi + (p_phi_c*c)/(K_phi_c+c)+p_phi_theta*H_theta)*(1./(K_phi_rho+phif_total));
 	
 	// a0
 	double domegadrho = ((2.*PIE*dphif_dot_plusdrho)/(tau_omega))*lamda1*sinVartheta; 
@@ -1643,15 +1794,19 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	Vector2d dRlamdaPdrho;
 	dRlamdaPdrho(0) =  dphif_dot_plusdrho*(lamdaE_a-1)/tau_lamdaP_a;
 	dRlamdaPdrho(1) =  dphif_dot_plusdrho*(lamdaE_s-1)/tau_lamdaP_s;
-	
+
+	// phif_scaffold
+    double dRphi_scaffolddrho = - d_phi_rho_c_scaffold*c*phif_scaffold;
+
 	// Aseemble in one vector
-	VectorXd dRThetadrho(6);
+	VectorXd dRThetadrho(7);
 	dRThetadrho(0) = dRphidrho;
 	dRThetadrho(1) = dRa0drho(0);
 	dRThetadrho(2) = dRa0drho(1);
 	dRThetadrho(3) = dRkappadrho;
 	dRThetadrho(4) = dRlamdaPdrho(0);
 	dRThetadrho(5) = dRlamdaPdrho(1);
+    dRThetadrho(6) = dRphi_scaffolddrho;
 	
 	// the tangent matrix in this case remains the same as KK_local
 	dThetadrho = KK_local.lu().solve(-dRThetadrho);
@@ -1665,7 +1820,7 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	// Explicit derivatives of the residuals with respect to c
 	
 	// phi
-	double dphif_dot_plusdc = (rho/(K_phi_rho+phif))*((p_phi_c)/(K_phi_c+c) - (p_phi_c*c)/((K_phi_c+c)*(K_phi_c+c)));
+	double dphif_dot_plusdc = (rho/(K_phi_rho+phif_total))*((p_phi_c)/(K_phi_c+c) - (p_phi_c*c)/((K_phi_c+c)*(K_phi_c+c)));
 	double dRphidc = dphif_dot_plusdc - d_phi_rho_c*rho*phif;
 	
 	// a0
@@ -1679,15 +1834,19 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 	Vector2d dRlamdaPdc;
 	dRlamdaPdc(0) =  dphif_dot_plusdc*(lamdaE_a-1)/tau_lamdaP_a;
 	dRlamdaPdc(1) =  dphif_dot_plusdc*(lamdaE_s-1)/tau_lamdaP_s;
-	
+
+    // phi
+    double dRphi_scaffolddc = - d_phi_rho_c_scaffold*rho*phif_scaffold;
+
 	// Aseemble in one vector
-	VectorXd dRThetadc(6);
+	VectorXd dRThetadc(7);
 	dRThetadc(0) = dRphidc;
 	dRThetadc(1) = dRa0dc(0);
 	dRThetadc(2) = dRa0dc(1);
 	dRThetadc(3) = dRkappadc;
 	dRThetadc(4) = dRlamdaPdc(0);
 	dRThetadc(5) = dRlamdaPdc(1);
+    dRThetadc(6) = dRphi_scaffolddc;
 	
 	// the tangent matrix in this case remains the same as KK_local
 	dThetadc = KK_local.lu().solve(-dRThetadc);
@@ -2248,6 +2407,114 @@ void evalForwardEulerUpdate(double local_dt, const std::vector<double> &local_pa
     lamdaP_dot(1) = phif_dot_plus*(lamdaE_s-1)/tau_lamdaP_s;
 }
 
+
+void evalQ(const std::vector<double> &global_parameters, const double& phif, const double& phif_scaffold,Vector2d a0,double kappa, const Vector2d& lamdaP,
+           const Matrix2d& CC, const double& rho, const double& c, const Vector2d& Grad_rho, const Vector2d& Grad_c, Vector2d &Q_rho, Vector2d &Q_c)
+{
+    double k0 = global_parameters[0]; // neo hookean
+    double kf = global_parameters[1]; // stiffness of collagen
+    double k2 = global_parameters[2]; // nonlinear exponential
+    double t_rho = global_parameters[3]; // force of fibroblasts
+    double t_rho_c = global_parameters[4]; // force of myofibroblasts enhanced by chemical
+    double K_t = global_parameters[5]; // saturation of collagen on force
+    double K_t_c = global_parameters[6]; // saturation of chemical on force
+    double D_rhorho = global_parameters[7]; // diffusion of cells
+    double D_rhoc = global_parameters[8]; // diffusion of chemotactic gradient
+    double D_cc = global_parameters[9]; // diffusion of chemical
+    double p_rho =global_parameters[10]; // production of fibroblasts naturally
+    double p_rho_c = global_parameters[11]; // production enhanced by the chem
+    double p_rho_theta = global_parameters[12]; // mechanosensing
+    double K_rho_c= global_parameters[13]; // saturation of cell production by chemical
+    double K_rho_rho = global_parameters[14]; // saturation of cell by cell
+    double d_rho = global_parameters[15] ;// decay of cells
+    double vartheta_e = global_parameters[16]; // physiological state of area stretch
+    double gamma_theta = global_parameters[17]; // sensitivity of heviside function
+    double p_c_rho = global_parameters[18];// production of C by cells
+    double p_c_thetaE = global_parameters[19]; // coupling of elastic and chemical
+    double K_c_c = global_parameters[20];// saturation of chem by chem
+    double d_c = global_parameters[21]; // decay of chemical
+
+    double k0_scaffold = global_parameters[22]; // Scaffold stiffness parameters
+    double kf_scaffold = global_parameters[23];
+    double k2_scaffold = global_parameters[24];
+
+    double phif_total = phif + phif_scaffold;
+    Matrix2d CCinv = CC.inverse();
+    Matrix2d Identity;Identity<<1.,0.,0.,1.;
+    // Update kinematics.
+    // fiber tensor in the reference
+    Matrix2d a0a0 = a0*a0.transpose();
+    Matrix2d Rot90;Rot90<<0,-1,1,0;
+    Vector2d s0 = Rot90*a0;
+    Matrix2d s0s0 = s0*s0.transpose();
+    Matrix2d A0 = kappa*Identity + (1-2.*kappa)*a0a0;
+    double I4tot = a0.dot(CC*a0);
+    double trA = kappa*(CC(0,0)+CC(1,1)) + (1-2*kappa)*I4tot;
+
+    // Flux and Source terms for the rho and the C
+    Q_rho = -3*(D_rhorho-phif_total*(D_rhorho-D_rhorho/10))*A0*Grad_rho/trA - 3*(D_rhoc-phif_total*(D_rhoc-D_rhoc/10))*rho*A0*Grad_c/trA;
+    Q_c = -3*(D_cc-phif_total*(D_cc-D_cc/10))*A0*Grad_c/trA;
+}
+
+void evalS(const std::vector<double> &global_parameters, const double& phif, const double& phif_scaffold,Vector2d a0, double kappa, const Vector2d& lamdaP,
+           const Matrix2d& CC, const double& rho, const double& c, double &S_rho, double &S_c)
+{
+    double k0 = global_parameters[0]; // neo hookean
+    double kf = global_parameters[1]; // stiffness of collagen
+    double k2 = global_parameters[2]; // nonlinear exponential
+    double t_rho = global_parameters[3]; // force of fibroblasts
+    double t_rho_c = global_parameters[4]; // force of myofibroblasts enhanced by chemical
+    double K_t = global_parameters[5]; // saturation of collagen on force
+    double K_t_c = global_parameters[6]; // saturation of chemical on force
+    double D_rhorho = global_parameters[7]; // diffusion of cells
+    double D_rhoc = global_parameters[8]; // diffusion of chemotactic gradient
+    double D_cc = global_parameters[9]; // diffusion of chemical
+    double p_rho =global_parameters[10]; // production of fibroblasts naturally
+    double p_rho_c = global_parameters[11]; // production enhanced by the chem
+    double p_rho_theta = global_parameters[12]; // mechanosensing
+    double K_rho_c= global_parameters[13]; // saturation of cell production by chemical
+    double K_rho_rho = global_parameters[14]; // saturation of cell by cell
+    double d_rho = global_parameters[15] ;// decay of cells
+    double vartheta_e = global_parameters[16]; // physiological state of area stretch
+    double gamma_theta = global_parameters[17]; // sensitivity of heviside function
+    double p_c_rho = global_parameters[18];// production of C by cells
+    double p_c_thetaE = global_parameters[19]; // coupling of elastic and chemical
+    double K_c_c = global_parameters[20];// saturation of chem by chem
+    double d_c = global_parameters[21]; // decay of chemical
+
+    double k0_scaffold = global_parameters[22]; // Scaffold stiffness parameters
+    double kf_scaffold = global_parameters[23];
+    double k2_scaffold = global_parameters[24];
+    double d_c_phi_rho = global_parameters[25];
+
+    double phif_total = phif + phif_scaffold;
+    Matrix2d CCinv = CC.inverse();
+    Matrix2d Identity;Identity<<1.,0.,0.,1.;
+    // Update kinematics.
+    // fiber tensor in the reference
+    Matrix2d a0a0 = a0*a0.transpose();
+    Matrix2d Rot90;Rot90<<0,-1,1,0;
+    Vector2d s0 = Rot90*a0;
+    Matrix2d s0s0 = s0*s0.transpose();
+    // recompute the split
+    double lamdaP_a = lamdaP(0);
+    double lamdaP_s = lamdaP(1);
+    Matrix2d FFg = lamdaP_a*(a0a0) + lamdaP_s*(s0s0);
+    double thetaP = lamdaP_a*lamdaP_s;
+    Matrix2d FFginv = (1./lamdaP_a)*(a0a0) + (1./lamdaP_s)*(s0s0);
+    // elastic strain
+    Matrix2d CCe = FFginv*CC*FFginv;
+
+    // calculate the normal stretch
+    double thetaE = sqrt(CCe.determinant());
+    double theta = thetaE*thetaP;
+    double lamda_N = 1./thetaE;
+
+    double He = 1./(1.+exp(-gamma_theta*(thetaE - vartheta_e)));
+    S_rho = (p_rho + p_rho_c*c/(K_rho_c+c)+p_rho_theta*He)*(1-rho/K_rho_rho)*rho - d_rho*rho;
+    S_c = (p_c_rho*c+ p_c_thetaE*He)*(rho/(K_c_c+c)) - (d_c + d_c_phi_rho*rho*phif)*c;
+}
+
 //--------------------------------------------------------//
 // PRINTING ROUTINES
 //--------------------------------------------------------//
@@ -2563,7 +2830,7 @@ std::vector<double> evalShapeFunctionsQuadraticReta(double xi,double eta)
 // Functions for numerical tests
 //-------------------------------//
 
-void evalPsif(const std::vector<double> &global_parameters,double kappa, double I1e,double I4e,double &Psif,double &Psif1,double &Psif4)
+void evalPsif(const std::vector<double> &global_parameters,double kappa, double I1e,double I4e,double &Psif,double &Psif1,double &Psif4,double &Psif_scaffold,double &Psif1_scaffold,double &Psif4_scaffold)
 {
 	// unpack material constants
 	//---------------------------------//
@@ -2572,14 +2839,22 @@ void evalPsif(const std::vector<double> &global_parameters,double kappa, double 
 	double k0 = global_parameters[0]; // neo hookean
 	double kf = global_parameters[1]; // stiffness of collagen
 	double k2 = global_parameters[2]; // nonlinear exponential
-	// passive elastic
-	Psif = (kf/(2.*k2))*(exp( k2*pow((kappa*I1e + (1-2*kappa)*I4e -1),2))-1);
-	Psif1 = 2*k2*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
-	Psif4 = 2*k2*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
+    double k0_scaffold = global_parameters[22]; // Scaffold stiffness parameters
+    double kf_scaffold = global_parameters[23];
+    double k2_scaffold = global_parameters[24];
+
+    // passive elastic
+    Psif = (kf/(2.*k2))*(exp( k2*pow((kappa*I1e + (1-2*kappa)*I4e -1),2))-1);
+    Psif1 = 2*k2*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
+    Psif4 = 2*k2*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif;
+    Psif_scaffold = (kf_scaffold/(2.*k2_scaffold))*(exp( k2_scaffold*pow((kappa*I1e + (1-2*kappa)*I4e -1),2))-1);
+    Psif1_scaffold = 2*k2_scaffold*kappa*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif_scaffold;
+    Psif4_scaffold = 2*k2_scaffold*(1-2*kappa)*(kappa*I1e + (1-2*kappa)*I4e -1)*Psif_scaffold;
 }
 
-void evalSS(const std::vector<double> &global_parameters, double phif, Vector2d a0, double kappa, double lamdaP_a,double lamdaP_s,const Matrix2d &CC,double rho, double c, Matrix2d &SSpas,Matrix2d &SSact, Matrix2d&SSpres)
+void evalSS(const std::vector<double> &global_parameters, double phif, double phif_scaffold, Vector2d a0, double kappa, double lamdaP_a,double lamdaP_s,const Matrix2d &CC,double rho, double c, Matrix2d &SSpas,Matrix2d &SSact, Matrix2d&SSpres)
 {
+    double phif_total = phif + phif_scaffold;
 	Matrix2d Identity;Identity<<1,0,0,1;
 	Matrix2d a0a0 = a0*a0.transpose();
 	Matrix2d Rot90; Rot90<<0,-1,1,0;
@@ -2595,21 +2870,44 @@ void evalSS(const std::vector<double> &global_parameters, double phif, Vector2d 
 	Matrix2d CCe = FFginv*CC*FFginv;
 	double I4tot = a0.dot(CC*a0);
 	double trA = kappa*(CC(0,0)+CC(1,1)) + (1-2*kappa)*I4tot;
-	double k0 = global_parameters[0]; // neo hookean
-	double kf = global_parameters[1]; // stiffness of collagen
-	double k2 = global_parameters[2]; // nonlinear exponential
-	double t_rho = global_parameters[3]; // force of fibroblasts
-	double t_rho_c = global_parameters[4]; // force of myofibroblasts enhanced by chemical
-	double K_t_c = global_parameters[5]; // saturation of chemical on force
+
+    double k0 = global_parameters[0]; // neo hookean
+    double kf = global_parameters[1]; // stiffness of collagen
+    double k2 = global_parameters[2]; // nonlinear exponential
+    double t_rho = global_parameters[3]; // force of fibroblasts
+    double t_rho_c = global_parameters[4]; // force of myofibroblasts enhanced by chemical
+    double K_t = global_parameters[5]; // saturation of collagen on force
+    double K_t_c = global_parameters[6]; // saturation of chemical on force
+    double D_rhorho = global_parameters[7]; // diffusion of cells
+    double D_rhoc = global_parameters[8]; // diffusion of chemotactic gradient
+    double D_cc = global_parameters[9]; // diffusion of chemical
+    double p_rho =global_parameters[10]; // production of fibroblasts naturally
+    double p_rho_c = global_parameters[11]; // production enhanced by the chem
+    double p_rho_theta = global_parameters[12]; // mechanosensing
+    double K_rho_c= global_parameters[13]; // saturation of cell production by chemical
+    double K_rho_rho = global_parameters[14]; // saturation of cell by cell
+    double d_rho = global_parameters[15] ;// decay of cells
+    double vartheta_e = global_parameters[16]; // physiological state of area stretch
+    double gamma_theta = global_parameters[17]; // sensitivity of heviside function
+    double p_c_rho = global_parameters[18];// production of C by cells
+    double p_c_thetaE = global_parameters[19]; // coupling of elastic and chemical
+    double K_c_c = global_parameters[20];// saturation of chem by chem
+    double d_c = global_parameters[21]; // decay of chemical
+
+    double k0_scaffold = global_parameters[22]; // Scaffold stiffness parameters
+    double kf_scaffold = global_parameters[23];
+    double k2_scaffold = global_parameters[24];
+
 	double Psif,Psif1,Psif4;
+    double Psif_scaffold,Psif1_scaffold,Psif4_scaffold;
 	double I1e = CCe(0,0)+CCe(1,1);
 	double I4e = a0.dot(CCe*a0);
-	evalPsif(global_parameters,kappa,I1e,I4e,Psif,Psif1,Psif4);
-	Matrix2d SSe_pas = k0*Identity + phif*(Psif1*Identity + Psif4*a0a0);
+	evalPsif(global_parameters,kappa,I1e,I4e,Psif,Psif1,Psif4,Psif_scaffold,Psif1_scaffold,Psif4_scaffold);
+    Matrix2d SSe_pas = phif*(k0*Identity + Psif1*Identity + Psif4*a0a0) + phif_scaffold*(k0_scaffold*Identity + Psif1_scaffold*Identity + Psif4_scaffold*a0a0);
 	SSpas = thetaP*FFginv*SSe_pas*FFginv;
 	double traction_act = (t_rho + t_rho_c*c/(K_t_c + c))*rho;
-	SSact = (thetaP*traction_act*phif/trA)*(kappa*Identity+(1-2*kappa)*a0a0);
-	double pressure = -k0*lamda_N*lamda_N;
+	SSact = (thetaP*traction_act*phif_total/(trA*(K_t*K_t+phif_total*phif_total)))*(kappa*Identity+(1-2*kappa)*a0a0);
+	double pressure = -(phif*k0 + phif_scaffold*k0_scaffold)*lamda_N*lamda_N;
 	SSpres = pressure*thetaP*CCinv;
 }
 

@@ -27,6 +27,8 @@ Solve.
 #include <time.h>
 
 #include <Eigen/Dense>
+#include <iomanip>
+
 using namespace Eigen;
 
 double frand(double fMin, double fMax)
@@ -42,44 +44,67 @@ int main(int argc, char *argv[])
     std::cout<<"\nResults 3: full domain simulations \n";
     srand (time(NULL));
 
-//    // Open file
-//    std::string readfilename = "samples_to_run.txt";
-//    std::ifstream readfile;
-//    readfile.open(readfilename.c_str());
-//    // Check if object is valid
-//    if(!readfile)
-//    {
-//        std::cerr << "Cannot open the file!"<<std::endl;
-//        return 1;
-//    }
-//
-//    // Create empty vectors
-//    std::vector<double> kv_vector;
-//    std::vector<double> k0_vector;
-//
-//    // Read the next line from File untill it reaches the end.
-//    for (std::string line; std::getline(readfile, line); ){
-//        // Split the string into numbers
-//        std::vector<std::string> strs;
-//        boost::split(strs,line,boost::is_any_of(" "));
-//
-//        // Print the line
+    // Open file
+    std::string readfilename = "samples_to_run.txt";
+    std::ifstream readfile;
+    readfile.open(readfilename.c_str());
+    // Check if object is valid
+    if(!readfile)
+    {
+        std::cerr << "Cannot open the file!"<<std::endl;
+        return 1;
+    }
+
+    // Create empty vectors
+    std::vector<double> k0_vector;
+    std::vector<double> kf_vector;
+    std::vector<double> k2_vector;
+    std::vector<double> phi_vector;
+    std::vector<double> mu_vector;
+    std::vector<double> kappa_vector;
+    std::vector<double> d_phif_vector;
+    std::vector<double> d_c_phi_rho_vector;
+//    std::vector<double> t_rho_vector;
+//    std::vector<double> K_t_vector;
+//    std::vector<double> tau_lamdaP_vector;
+
+    // Read the next line from File untill it reaches the end.
+    for (std::string line; std::getline(readfile, line); ){
+        // Split the string into numbers
+        std::vector<std::string> strs;
+        boost::split(strs,line,boost::is_any_of(" "));
+
+        // Print the line
 //        std::cout << std::stod(strs[0]) << std::endl;
 //        std::cout << std::stod(strs[1]) << std::endl;
-//
-//        // Push to the empty vectors we made
-//        kv_vector.push_back(std::stod(strs[0]));
-//        k0_vector.push_back(std::stod(strs[1]));
-//    }
-//
-//    // Check the length for samples
-//    std::cout << "\n" << kv_vector.size() << "\n";
-//    std::cout << "\n" << kv_vector.size() << "\n";
-//
-//    // Run each set of parameters separately in the loop
-//    readfile.close();
 
-    for(int sample = 0; sample < 1; sample++){
+        // Push to the empty vectors we made
+
+        // Scaffold parameters
+        k0_vector.push_back(std::stod(strs[0]));
+        kf_vector.push_back(std::stod(strs[1]));
+        k2_vector.push_back(std::stod(strs[2]));
+        mu_vector.push_back(std::stod(strs[3]));
+        kappa_vector.push_back(std::stod(strs[4]));
+        phi_vector.push_back(std::stod(strs[5]));
+        d_phif_vector.push_back(std::stod(strs[6]));
+        d_c_phi_rho_vector.push_back(std::stod(strs[6]));
+
+        // Biophysical parameters
+//        t_rho_vector.push_back(std::stod(strs[1]));
+//        K_t_vector.push_back(std::stod(strs[2]));
+//        tau_lamdaP_vector.push_back(std::stod(strs[3]));
+    }
+
+    // Check the length for samples
+    int num_samples = k0_vector.size();
+    std::cout << "\n" << num_samples << "\n";
+
+    // Run each set of parameters separately in the loop
+    std::vector<int> success_vector;
+    readfile.close();
+
+    for(int sample = 0; sample < num_samples; sample++){
         //---------------------------------//
         // GLOBAL PARAMETERS
         //
@@ -94,6 +119,9 @@ int main(int argc, char *argv[])
         double k0 = 0.0511/stress_phys; // neo hookean for skin, used previously, in MPa
         double kf = 0.015/stress_phys; // stiffness of collagen in MPa, from previous paper
         double k2 = 0.048; // nonlinear exponential coefficient, non-dimensional
+        double k0_scaffold = k0; //k0_vector[sample]/stress_phys; // neo hookean for skin, used previously, in MPa
+        double kf_scaffold = kf; //kf_vector[sample]/stress_phys; // stiffness of collagen in MPa, from previous paper
+        double k2_scaffold = k2; //k2_vector[sample]; // nonlinear exponential coefficient, non-dimensional
         double t_rho = 0.005/stress_phys; // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
         double t_rho_c = 10*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
         double K_t = 0.3; // Saturation of mechanical force by collagen
@@ -113,8 +141,9 @@ int main(int argc, char *argv[])
         double p_c_thetaE = 300.0e-16*t_max/c_max/c_max; // coupling of elastic and chemical, three fold
         double K_c_c = 1./c_max;// saturation of chem by chem, from steady state
         double d_c = 0.01*t_max; // 0.01 decay of chemical in 1/hours
+        double d_c_phi_rho = d_c*rho_phys; //d_c_phi_rho_vector[sample]*t_max; // 0.01 decay of chemical in 1/hours
         //---------------------------------//
-        std::vector<double> global_parameters = {k0,kf,k2,t_rho,t_rho_c,K_t,K_t_c,D_rhorho,D_rhoc,D_cc,p_rho,p_rho_c,p_rho_theta,K_rho_c,K_rho_rho,d_rho,vartheta_e,gamma_theta,p_c_rho,p_c_thetaE,K_c_c,d_c};
+        std::vector<double> global_parameters = {k0,kf,k2,t_rho,t_rho_c,K_t,K_t_c,D_rhorho,D_rhoc,D_cc,p_rho,p_rho_c,p_rho_theta,K_rho_c,K_rho_rho,d_rho,vartheta_e,gamma_theta,p_c_rho,p_c_thetaE,K_c_c,d_c, k0_scaffold, kf_scaffold, k2_scaffold, d_c_phi_rho};
 
         //---------------------------------//
         // LOCAL PARAMETERS
@@ -126,25 +155,27 @@ int main(int argc, char *argv[])
         double K_phi_c = 0.0001/c_max; // saturation of C effect on deposition. RANDOM?
         double d_phi = 0.000970*t_max; // rate of degradation, in the order of the wound process, 100 percent in one year for wound, means 0.000116 effective per hour means degradation = 0.002 - 0.000116
         double d_phi_rho_c = 0.5*d_phi; // 0.000194; // degradation coupled to chemical and cell density to maintain phi equilibrium
+        double d_phi_scaffold = d_phi; //d_phif_vector[sample]*t_max; // rate of degradation, in the order of the wound process, 100 percent in one year for wound, means 0.000116 effective per hour means degradation = 0.002 - 0.000116
+        double d_phi_rho_c_scaffold = 0.5*d_phi_scaffold; // 0.000194; // degradation coupled to chemical and cell density to maintain phi equilibrium
         double K_phi_rho = p_phi/d_phi - 1; // saturation of collagen fraction itself, from steady state
         //
         //
         // fiber alignment
-        double tau_omega = 100000*10./(K_phi_rho+1); // time constant for angular reorientation, think 100 percent in one year
+        double tau_omega = 10./(K_phi_rho+1); // time constant for angular reorientation, think 100 percent in one year
         //
         // dispersion parameter
-        double tau_kappa = 100000*1./(K_phi_rho+1); // time constant, on the order of a year
+        double tau_kappa = 1./(K_phi_rho+1); // time constant, on the order of a year
         double gamma_kappa = 5.; // exponent of the principal stretch ratio
         //
         // permanent contracture/growth
-        double tau_lamdaP_a = 0.05/(K_phi_rho+1); // time constant for direction a, on the order of a year
-        double tau_lamdaP_s = 0.05/(K_phi_rho+1); // time constant for direction s, on the order of a year
+        double tau_lamdaP_a = 0.5/(K_phi_rho+1); // time constant for direction a, on the order of a year
+        double tau_lamdaP_s = 0.5/(K_phi_rho+1); // time constant for direction s, on the order of a year
         //
         // solution parameters
         double tol_local = 1e-5; // local tolerance
         double max_local_iter = 35; // max local iter (implicit) or time step ratio (explicit)
         //
-        std::vector<double> local_parameters = {p_phi,p_phi_c,p_phi_theta,K_phi_c,K_phi_rho,d_phi,d_phi_rho_c,tau_omega,tau_kappa,gamma_kappa,tau_lamdaP_a,tau_lamdaP_s,gamma_theta,vartheta_e,tol_local,max_local_iter};
+        std::vector<double> local_parameters = {p_phi,p_phi_c,p_phi_theta,K_phi_c,K_phi_rho,d_phi,d_phi_rho_c,tau_omega,tau_kappa,gamma_kappa,tau_lamdaP_a,tau_lamdaP_s,gamma_theta,vartheta_e,tol_local,max_local_iter, d_phi_scaffold, d_phi_rho_c_scaffold};
         //
         // other local stuff
         double PIE = 3.14159;
@@ -154,12 +185,13 @@ int main(int argc, char *argv[])
         // values for the wound
         double rho_wound = 0; // [cells/mm^3]
         double c_wound = 1.0; //1.0e-4;
-        double phif0_wound= 0.01;
-        double kappa0_wound = 0.4;
-        double a0x = frand(0,1.);
-        double a0y = sqrt(1-a0x*a0x);
-        Vector2d a0_wound;a0_wound<<a0x,a0y;
-        Vector2d lamda0_wound;lamda0_wound<<1.,1.;
+        double phif0_wound = 0;
+        double phif_scaffold_0_wound = 0.01; //phi_vector[sample];
+        double kappa0_wound = 0.4; //kappa_vector[sample];
+        double a0x = cos(0); // mu_vector[sample]
+        double a0y = sin(0);
+        Vector2d a0_wound; a0_wound<<a0x,a0y;
+        Vector2d lamda0_wound; lamda0_wound<<1.,1.;
         //---------------------------------//
 
 
@@ -168,9 +200,10 @@ int main(int argc, char *argv[])
         double rho_healthy = 1.0; //1000; // [cells/mm^3]
         double c_healthy = 0.0;
         double phif0_healthy= 1.;
+        double phif_scaffold_0_healthy= 0.;
         double kappa0_healthy = 0.4;
+        double mu_healthy = 0;
         Vector2d a0_healthy;a0_healthy<<1.0,0.0;
-        a0_wound = a0_healthy;
         Vector2d lamda0_healthy;lamda0_healthy<<1.,1.;
         //---------------------------------//
 
@@ -180,7 +213,7 @@ int main(int argc, char *argv[])
         std::cout<<"Going to create the mesh\n";
         //std::vector<double> rectangleDimensions = {0.0,75.0,0.0,75.0};
         std::vector<double> rectangleDimensions = {-1.0,1.0,-1.0,1.0};
-        std::vector<int> meshResolution = {38,38};
+        std::vector<int> meshResolution = {35,35};
         QuadMesh myMesh = myRectangleMesh(rectangleDimensions, meshResolution);
         //QuadMesh myMesh = myQuadraticRectangleMesh(rectangleDimensions, meshResolution);
         //QuadMesh myMesh = myMultiBlockMesh(rectangleDimensions, meshResolution);
@@ -220,7 +253,7 @@ int main(int argc, char *argv[])
         //
         // values at the integration points
         std::vector<double> ip_phi0(n_elem*IP_size,phif0_healthy);
-        std::vector<double> ip_phi_scaffold_0(n_elem*IP_size,0.0);
+        std::vector<double> ip_phi_scaffold_0(n_elem*IP_size,phif_scaffold_0_healthy);
         std::vector<Vector2d> ip_a00(n_elem*IP_size,a0_healthy);
         std::vector<double> ip_kappa0(n_elem*IP_size,kappa0_healthy);
         std::vector<Vector2d> ip_lamda0(n_elem*IP_size,lamda0_healthy);
@@ -310,6 +343,7 @@ int main(int argc, char *argv[])
                     // wound
                     std::cout<<"IP wound node: "<<IP_size*elemi+ip<<"\n";
                     ip_phi0[elemi*IP_size+ip] = phif0_wound;
+                    ip_phi_scaffold_0[elemi*IP_size+ip] = phif_scaffold_0_wound;
                     ip_a00[elemi*IP_size+ip] = a0_wound;
                     ip_kappa0[elemi*IP_size+ip] = kappa0_wound;
                     ip_lamda0[elemi*IP_size+ip] = lamda0_wound;
@@ -318,8 +352,16 @@ int main(int argc, char *argv[])
                     // transition
                     std::cout<<"IP transition node: "<<IP_size*elemi+ip<<"\n";
                     ip_phi0[elemi*IP_size+ip] = phif0_healthy*smoother_step;
+                    ip_phi_scaffold_0[elemi*IP_size+ip] = phif_scaffold_0_wound*(1 - smoother_step);
+                    double mu_interp = mu_vector[sample]*(1 - smoother_step);
+                    Vector2d a0_transition = Vector2d(cos(mu_interp),sin(mu_interp));
                     ip_a00[elemi*IP_size+ip] = a0_wound;
-                    ip_kappa0[elemi*IP_size+ip] = kappa0_wound;
+                    if(kappa0_healthy > kappa0_wound){
+                        ip_kappa0[elemi*IP_size+ip] = kappa0_wound + (kappa0_healthy - kappa0_wound)*smoother_step;
+                    }
+                    else{
+                        ip_kappa0[elemi*IP_size+ip] = kappa0_wound*(1 - smoother_step);
+                    }
                     ip_lamda0[elemi*IP_size+ip] = lamda0_wound;
                 }
                 // else we are outside and already set to healthy values
@@ -348,6 +390,8 @@ int main(int argc, char *argv[])
         myTissue.node_c = node_c0;
         myTissue.ip_phif_0 = ip_phi0;
         myTissue.ip_phif = ip_phi0;
+        myTissue.ip_phif_scaffold_0 = ip_phi_scaffold_0;
+        myTissue.ip_phif_scaffold = ip_phi_scaffold_0;
         myTissue.ip_a0_0 = ip_a00;
         myTissue.ip_a0 = ip_a00;
         myTissue.ip_kappa_0 = ip_kappa0;
@@ -415,9 +459,14 @@ int main(int argc, char *argv[])
 
         //----------------------------------------------------------//
         // SOLVE
-        sparseWoundSolver(myTissue, filename, 10,save_node,save_ip);
+        sparseWoundSolver(myTissue, filename, 10, save_node, save_ip, success_vector);
         //----------------------------------------------------------//
     }
 
+    std::ofstream saveparamsfile;
+    saveparamsfile.open("saveparams.txt");
+    for (int i=0;i<num_samples;i++){
+        saveparamsfile << success_vector[i] << "\n";
+    }
     return 0;
 }
