@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
         double p_c_thetaE = 300.0e-16*t_max/c_max/c_max; // coupling of elastic and chemical, three fold
         double K_c_c = 1./c_max;// saturation of chem by chem, from steady state
         double d_c = 0.001*t_max; // 0.01 decay of chemical in 1/hours
-        double d_c_phi_rho = 0; //d_c*rho_phys; //d_c_phi_rho_vector[sample]*t_max; // 0.01 decay of chemical in 1/hours
+        double d_c_phi_rho = d_c; //d_c_phi_rho_vector[sample]*t_max; // 0.01 decay of chemical in 1/hours
         //---------------------------------//
         std::vector<double> global_parameters = {k0,kf,k2,t_rho,t_rho_c,K_t,K_t_c,D_rhorho,D_rhoc,D_cc,p_rho,p_rho_c,p_rho_theta,K_rho_c,K_rho_rho,d_rho,vartheta_e,gamma_theta,p_c_rho,p_c_thetaE,K_c_c,d_c, k0_scaffold, kf_scaffold, k2_scaffold, d_c_phi_rho};
 
@@ -168,8 +168,8 @@ int main(int argc, char *argv[])
         double gamma_kappa = 5.; // exponent of the principal stretch ratio
         //
         // permanent contracture/growth
-        double tau_lamdaP_a = 0.5/(K_phi_rho+1); // time constant for direction a, on the order of a year
-        double tau_lamdaP_s = 0.5/(K_phi_rho+1); // time constant for direction s, on the order of a year
+        double tau_lamdaP_a = 0.05/(K_phi_rho+1); // time constant for direction a, on the order of a year
+        double tau_lamdaP_s = 0.05/(K_phi_rho+1); // time constant for direction s, on the order of a year
         //
         // solution parameters
         double tol_local = 1e-5; // local tolerance
