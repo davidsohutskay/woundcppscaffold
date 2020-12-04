@@ -183,10 +183,10 @@ int main(int argc, char *argv[])
 
         //---------------------------------//
         // values for the wound
-        double rho_wound = 0; // [cells/mm^3]
+        double rho_wound = 1.0; // [cells/mm^3]
         double c_wound = 1.0; //1.0e-4;
         double phif0_wound = 0;
-        double phif_scaffold_0_wound = 0.01; //phi_vector[sample];
+        double phif_scaffold_0_wound = 0.5; //phi_vector[sample];
         double kappa0_wound = 0.3; //kappa_vector[sample];
         double a0x = cos(0); // mu_vector[sample]
         double a0y = sin(0);
@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
             else if(distance < 0.3){
                 // transition
                 std::cout<<"transition node "<<nodei<<"\n";
-                node_rho0[nodei] = rho_healthy*smoother_step;
+                node_rho0[nodei] = rho_wound + (rho_healthy - rho_wound)*smoother_step;
                 node_c0[nodei] = c_wound*(1 - smoother_step);
             }
             // else we are outside and already set to healthy values
