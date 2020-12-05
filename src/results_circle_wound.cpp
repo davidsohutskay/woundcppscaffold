@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
         //
         // for nondimensionalization
         // for normalization
-        double t_max = 7*24*2;
+        double t_max = 7*24*4;
         double x_length = 37.5;
         double rho_phys = 1000.; // [cells/mm^3]
         double stress_phys = 0.005;
@@ -410,8 +410,8 @@ int main(int argc, char *argv[])
         myTissue.nBC_x = nBC_x;
         myTissue.nBC_rho = nBC_rho;
         myTissue.nBC_c = nBC_c;
-        myTissue.time_final = 1.0; //24*15;
-        myTissue.time_step = 1.0/14/250; //0.0002;
+        myTissue.time_final = 1.0; //24*14;
+        myTissue.time_step = 1.0/28/250; // total/increments/savefreq
         myTissue.tol = 1e-8;
         myTissue.max_iter = 25;
         myTissue.n_node = myMesh.n_nodes;
