@@ -16,7 +16,7 @@ import pyDOE as pd
 import numpy as np
 
 # Specify how many simulations you can afford:
-num_simulations = 1200
+num_simulations = 200
 
 # Constants
 
@@ -48,13 +48,13 @@ X_scaled = pd.lhs(num_inputs, num_simulations)
 X = X_scaled * (bounds[:, 1] - bounds[:, 0]) + bounds[:, 0]
 
 # Split into a few separate runs
-X1 = X[0:400,:]
-X2 = X[400:800,:]
-X3 = X[800:1200,:]
+X1 = X[0:200,:]
+# X2 = X[400:800,:]
+# X3 = X[800:1200,:]
 
 # Save to a text file
 np.savetxt('samples_to_run.txt', X1, fmt='%.6f')
-np.savetxt('samples_to_run_2.txt', X2, fmt='%.6f')
-np.savetxt('samples_to_run_3.txt', X3, fmt='%.6f')
+# np.savetxt('samples_to_run_2.txt', X2, fmt='%.6f')
+# np.savetxt('samples_to_run_3.txt', X3, fmt='%.6f')
 
 # You must do all these simulations...

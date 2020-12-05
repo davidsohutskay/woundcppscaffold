@@ -3,7 +3,7 @@
 #SBATCH -A abuganza
 #SBATCH --nodes=1
 #SBATCH --ntasks=24
-#SBATCH --time=96:00:00
+#SBATCH --time=7-00:00:00
 
 # Loads tools and sets the application up
 # Change to the directory
