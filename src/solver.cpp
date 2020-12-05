@@ -470,7 +470,7 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 			}
 			iter += 1;
 			if(iter == myTissue.max_iter){std::cout<<"\nCheck, make sure residual is small enough\n";}
-			std::cout<<"End of iteration : "<<iter<<",\nResidual before increment: "<<normRR<<"\nIncrement norm: "<<normSOL<<"\n\n";
+			//std::cout<<"End of iteration : "<<iter<<",\nResidual before increment: "<<normRR<<"\nIncrement norm: "<<normSOL<<"\n\n";
 		}
 		// FINISH WHILE LOOP OF NEWTON INCREMENTS
 		

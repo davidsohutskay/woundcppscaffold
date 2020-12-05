@@ -1636,14 +1636,14 @@ VectorXd &dThetadCC, VectorXd &dThetadrho, VectorXd &dThetadc)
 		//std::cout<<"norm(RR): "<<residuum<<"\n";
 		//std::cout<<"norm(SOL): "<<normSOL<<"\n";
 		iter += 1;
-		if(normRR > 1e-4 && iter == max_local_iter){
-			std::cout<<"no local convergence\nlamda1: "<<lamda1<<", lamda0: "<<lamda0<<", lamdaP:"<<lamdaP(0)<<","<<lamdaP(1)<<",a0:"<<a0(0)<<","<<a0(1)<<"Ce_aa: "<<Ce_aa<<","<<Ce_as<<","<<Ce_ss<<"\n";
-			std::cout<<"Ce-lamda:"<<fabs(lamda1-Ce_aa)<<"\n";
-			std::cout<<"aux"<<aux00<<"\n";
-			std::cout<<"sinVartheta: "<<sinVartheta<<"\n";
-			std::cout<<"Res\n"<<RR_local<<"\nSOL_local\n"<<SOL_local<<"\n";
-			//throw std::runtime_error("sorry pal ");
-		}
+//		if(normRR > 1e-4 && iter == max_local_iter){
+//			std::cout<<"no local convergence\nlamda1: "<<lamda1<<", lamda0: "<<lamda0<<", lamdaP:"<<lamdaP(0)<<","<<lamdaP(1)<<",a0:"<<a0(0)<<","<<a0(1)<<"Ce_aa: "<<Ce_aa<<","<<Ce_as<<","<<Ce_ss<<"\n";
+//			std::cout<<"Ce-lamda:"<<fabs(lamda1-Ce_aa)<<"\n";
+//			std::cout<<"aux"<<aux00<<"\n";
+//			std::cout<<"sinVartheta: "<<sinVartheta<<"\n";
+//			std::cout<<"Res\n"<<RR_local<<"\nSOL_local\n"<<SOL_local<<"\n";
+//			//throw std::runtime_error("sorry pal ");
+//		}
 		
 	} // END OF WHILE LOOP OF LOCAL NEWTON
 	//a0 = a0/sqrt(a0.dot(a0));
