@@ -175,7 +175,7 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 	
 	// Save an original configuration file
 	std::stringstream ss;
-	ss << "REF";
+	ss << "0";
 	std::string filename_step = filename + ss.str()+".vtk";
     std::string filename_step2 = filename + "second_" + ss.str()+".vtk";
 	//std::cout<<"write paraview\n";
@@ -498,7 +498,7 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 		std::cout<<"End of Newton increments, residual: "<<residuum<<"\nEnd of time step :"<<step<<", \nTime: "<<time<<"\n\n";
 		
 		// write out a paraview file.
-		if(step%save_freq==0)	
+		if((step+1)%save_freq==0)
 		{
 			std::stringstream ss;
 			ss << step+1;

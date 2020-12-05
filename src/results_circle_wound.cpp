@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
         double K_phi_c = 0.0001/c_max; // saturation of C effect on deposition. RANDOM?
         double d_phi = 0.000970*t_max; // rate of degradation, in the order of the wound process, 100 percent in one year for wound, means 0.000116 effective per hour means degradation = 0.002 - 0.000116
         double d_phi_rho_c = 0.5*d_phi; // 0.000194; // degradation coupled to chemical and cell density to maintain phi equilibrium
-        double d_phi_scaffold = d_phi; //d_phif_vector[sample]*t_max; // rate of degradation, in the order of the wound process, 100 percent in one year for wound, means 0.000116 effective per hour means degradation = 0.002 - 0.000116
+        double d_phi_scaffold = d_phif_vector[sample]*t_max; // rate of degradation, in the order of the wound process, 100 percent in one year for wound, means 0.000116 effective per hour means degradation = 0.002 - 0.000116
         double d_phi_rho_c_scaffold = 0.5*d_phi_scaffold; // 0.000194; // degradation coupled to chemical and cell density to maintain phi equilibrium
         double K_phi_rho = p_phi/d_phi - 1; // saturation of collagen fraction itself, from steady state
         //
@@ -183,13 +183,13 @@ int main(int argc, char *argv[])
 
         //---------------------------------//
         // values for the wound
-        double rho_wound = 1.0; // [cells/mm^3]
+        double rho_wound = 0.0; // [cells/mm^3]
         double c_wound = 1.0; //1.0e-4;
         double phif0_wound = 0;
-        double phif_scaffold_0_wound = 0.5; //phi_vector[sample];
-        double kappa0_wound = 0.3; //kappa_vector[sample];
-        double a0x = cos(0); // mu_vector[sample]
-        double a0y = sin(0);
+        double phif_scaffold_0_wound = phi_vector[sample];
+        double kappa0_wound = kappa_vector[sample];
+        double a0x = cos(mu_vector[sample]); //
+        double a0y = sin(mu_vector[sample]);
         Vector2d a0_wound; a0_wound<<a0x,a0y;
         Vector2d lamda0_wound; lamda0_wound<<1.,1.;
         //---------------------------------//
@@ -411,7 +411,7 @@ int main(int argc, char *argv[])
         myTissue.nBC_rho = nBC_rho;
         myTissue.nBC_c = nBC_c;
         myTissue.time_final = 1.0; //24*15;
-        myTissue.time_step = 1.0/354/10; //0.0002;
+        myTissue.time_step = 1.0/14/250; //0.0002;
         myTissue.tol = 1e-8;
         myTissue.max_iter = 25;
         myTissue.n_node = myMesh.n_nodes;
@@ -459,7 +459,7 @@ int main(int argc, char *argv[])
 
         //----------------------------------------------------------//
         // SOLVE
-        sparseWoundSolver(myTissue, filename, 10, save_node, save_ip, success_vector);
+        sparseWoundSolver(myTissue, filename, 250, save_node, save_ip, success_vector);
         //----------------------------------------------------------//
     }
 
