@@ -168,8 +168,8 @@ int main(int argc, char *argv[])
         double gamma_kappa = 5.; // exponent of the principal stretch ratio
         //
         // permanent contracture/growth
-        double tau_lamdaP_a = 0.05/(K_phi_rho+1); // time constant for direction a, on the order of a year
-        double tau_lamdaP_s = 0.05/(K_phi_rho+1); // time constant for direction s, on the order of a year
+        double tau_lamdaP_a = 0.1/(K_phi_rho+1); // time constant for direction a, on the order of a year
+        double tau_lamdaP_s = 0.1/(K_phi_rho+1); // time constant for direction s, on the order of a year
         //
         // solution parameters
         double tol_local = 1e-5; // local tolerance
@@ -468,5 +468,6 @@ int main(int argc, char *argv[])
     for (int i=0;i<num_samples;i++){
         saveparamsfile << success_vector[i] << "\n";
     }
+    saveparamsfile.close();
     return 0;
 }

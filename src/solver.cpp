@@ -152,6 +152,12 @@ void evalElemJacobians(tissue &myTissue)
 void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,const std::vector<int> &save_node,const std::vector<int> &save_ip, std::vector<int> &success_vector)
 {
     Eigen::initParallel();
+    // Variable to check if we need to redo the time step
+    bool reset = false;
+    int slowdown = 5;
+    int slow_iter = 0;
+    int total_slowdown = 1;
+
     bool solver_status = true;
 	int n_dof = myTissue.n_dof;
     int n_elem = myTissue.LineQuadri.size();
@@ -436,8 +442,8 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 			solver2.compute(KK2);
             if(solver2.info()!=Eigen::Success) {
                 std::cout << "Factorization failed" << "\n";
-                solver_status = false;
-                goto solver_failed;
+                reset = true;
+                break;
             }
 			//Use the factors to solve the linear system 
 			SOL = solver2.solve(-1.*RR); 
@@ -473,9 +479,70 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 			//std::cout<<"End of iteration : "<<iter<<",\nResidual before increment: "<<normRR<<"\nIncrement norm: "<<normSOL<<"\n\n";
 		}
 		// FINISH WHILE LOOP OF NEWTON INCREMENTS
-		
+
+        // CHECK DIVERGENCE AND ADJUST STEP
+        if(reset){
+            std::cout << "Decreasing time step" << "\n";
+            if(slow_iter == 0){
+                // If first time, initiate slow_iter
+                slow_iter = slowdown;
+                total_slowdown = slowdown;
+            }
+            else{
+                // Increment and keep track of total slowdown
+                slow_iter = slow_iter*slowdown;
+                total_slowdown = total_slowdown*slowdown;
+
+                if(total_slowdown > pow(slowdown,3)){
+                    solver_status = false;
+                    goto solver_failed;
+                }
+            }
+            time_step = time_step/slowdown;
+            save_freq = save_freq*slowdown;
+            step = step - 1;
+            step = step*slowdown;
+            total_steps = total_steps*slowdown;
+
+            // reset nodal variables
+            for(int nodei=0;nodei<myTissue.n_node;nodei++)
+            {
+                myTissue.node_rho[nodei] = myTissue.node_rho_0[nodei];
+                myTissue.node_c[nodei] = myTissue.node_c_0[nodei] ;
+            }
+            // reset integration point variables
+            for(int elemi=0;elemi<myTissue.n_quadri;elemi++)
+            {
+                for(int IPi=0;IPi<IP_size;IPi++){
+                    myTissue.ip_phif[elemi*IP_size+IPi] = myTissue.ip_phif_0[elemi*IP_size+IPi];
+                    myTissue.ip_phif_scaffold[elemi*IP_size+IPi] = myTissue.ip_phif_scaffold_0[elemi*IP_size+IPi];
+                    myTissue.ip_a0[elemi*IP_size+IPi] = myTissue.ip_a0_0[elemi*IP_size+IPi];
+                    myTissue.ip_kappa[elemi*IP_size+IPi] = myTissue.ip_kappa_0[elemi*IP_size+IPi];
+                    myTissue.ip_lamdaP[elemi*IP_size+IPi] = myTissue.ip_lamdaP_0[elemi*IP_size+IPi];
+                }
+            }
+            reset = false;
+            continue;
+        }
+
 		// ADVANCE IN TIME
-		
+
+        time += time_step;
+        //std::cout<<"End of Newton increments, residual: "<<residuum<<"\nEnd of time step :"<<step<<", \nTime: "<<time<<"\n\n";
+
+        // Check if we are done slowing down
+        if(!reset && slow_iter != 0){
+            slow_iter = slow_iter - 1;
+            if(slow_iter == 0){
+                // Reset everything
+                std::cout << "Increasing time step" << "\n";
+                time_step = time_step*total_slowdown;
+                save_freq = save_freq/total_slowdown;
+                step = step/total_slowdown;
+                total_steps = total_steps/total_slowdown;
+            }
+        }
+
 		// nodal variables
 		for(int nodei=0;nodei<myTissue.n_node;nodei++)
 		{
@@ -493,9 +560,6 @@ void sparseWoundSolver(tissue &myTissue, std::string filename, int save_freq,con
 				myTissue.ip_lamdaP_0[elemi*IP_size+IPi] = myTissue.ip_lamdaP[elemi*IP_size+IPi];
 			}
 		}
-		
-		time += time_step;
-		std::cout<<"End of Newton increments, residual: "<<residuum<<"\nEnd of time step :"<<step<<", \nTime: "<<time<<"\n\n";
 		
 		// write out a paraview file.
 		if((step+1)%save_freq==0)
