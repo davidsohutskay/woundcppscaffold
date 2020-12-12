@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
         double k2_scaffold = k2_vector[sample]; // nonlinear exponential coefficient, non-dimensional
         double t_rho = 0.005/stress_phys; // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
         double t_rho_c = 10*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
-        double K_t = 0.3; // Saturation of mechanical force by collagen
+        double K_t = 0.4; // Saturation of mechanical force by collagen
         double K_t_c = 1/10.; // saturation of chemical on force. this can be calculated from steady state
         double D_rhorho = 0.0833*t_max/(x_length*x_length); // diffusion of cells in [mm^2/hour], not normalized
         double D_rhoc = (-1.66e-12/c_max)*t_max/(x_length*x_length); // diffusion of chemotactic gradient, an order of magnitude greater than random walk [mm^2/hour], not normalized
