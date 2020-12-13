@@ -56,17 +56,21 @@ int main(int argc, char *argv[])
     }
 
     // Create empty vectors
-    std::vector<double> k0_vector;
-    std::vector<double> kf_vector;
-    std::vector<double> k2_vector;
+//    std::vector<double> k0_vector;
+//    std::vector<double> kf_vector;
+//    std::vector<double> k2_vector;
+//    std::vector<double> phi_vector;
+//    std::vector<double> mu_vector;
+//    std::vector<double> kappa_vector;
+//    std::vector<double> d_phif_vector;
+//    std::vector<double> d_c_phi_rho_vector;
+
+    std::vector<double> t_rho_vector;
+    std::vector<double> tau_t_rho_c_vector;
+    std::vector<double> K_t_vector;
+    std::vector<double> K_t_c_vector;
+    std::vector<double> tau_lamdaP_vector;
     std::vector<double> phi_vector;
-    std::vector<double> mu_vector;
-    std::vector<double> kappa_vector;
-    std::vector<double> d_phif_vector;
-    std::vector<double> d_c_phi_rho_vector;
-//    std::vector<double> t_rho_vector;
-//    std::vector<double> K_t_vector;
-//    std::vector<double> tau_lamdaP_vector;
 
     // Read the next line from File untill it reaches the end.
     for (std::string line; std::getline(readfile, line); ){
@@ -81,23 +85,26 @@ int main(int argc, char *argv[])
         // Push to the empty vectors we made
 
         // Scaffold parameters
-        k0_vector.push_back(std::stod(strs[0]));
-        kf_vector.push_back(std::stod(strs[1]));
-        k2_vector.push_back(std::stod(strs[2]));
-        mu_vector.push_back(std::stod(strs[3]));
-        kappa_vector.push_back(std::stod(strs[4]));
-        phi_vector.push_back(std::stod(strs[5]));
-        d_phif_vector.push_back(std::stod(strs[6]));
-        d_c_phi_rho_vector.push_back(std::stod(strs[7]));
+//        k0_vector.push_back(std::stod(strs[0]));
+//        kf_vector.push_back(std::stod(strs[1]));
+//        k2_vector.push_back(std::stod(strs[2]));
+//        mu_vector.push_back(std::stod(strs[3]));
+//        kappa_vector.push_back(std::stod(strs[4]));
+//        phi_vector.push_back(std::stod(strs[5]));
+//        d_phif_vector.push_back(std::stod(strs[6]));
+//        d_c_phi_rho_vector.push_back(std::stod(strs[7]));
 
         // Biophysical parameters
-//        t_rho_vector.push_back(std::stod(strs[1]));
-//        K_t_vector.push_back(std::stod(strs[2]));
-//        tau_lamdaP_vector.push_back(std::stod(strs[3]));
+        t_rho_vector.push_back(std::stod(strs[1]));
+        tau_t_rho_c_vector.push_back(std::stod(strs[2]));
+        K_t_vector.push_back(std::stod(strs[3]));
+        K_t_c_vector.push_back(std::stod(strs[4]));
+        tau_lamdaP_vector.push_back(std::stod(strs[5]));
+        phi_vector.push_back(std::stod(strs[6]));
     }
 
     // Check the length for samples
-    int num_samples = k0_vector.size();
+    int num_samples = t_rho_vector.size();
     std::cout << "\n" << num_samples << "\n";
 
     // Run each set of parameters separately in the loop
@@ -119,13 +126,13 @@ int main(int argc, char *argv[])
         double k0 = 0.0511/stress_phys; // neo hookean for skin, used previously, in MPa
         double kf = 0.015/stress_phys; // stiffness of collagen in MPa, from previous paper
         double k2 = 0.048; // nonlinear exponential coefficient, non-dimensional
-        double k0_scaffold = k0_vector[sample]/stress_phys; // neo hookean for skin, used previously, in MPa
-        double kf_scaffold = kf_vector[sample]/stress_phys; // stiffness of collagen in MPa, from previous paper
-        double k2_scaffold = k2_vector[sample]; // nonlinear exponential coefficient, non-dimensional
-        double t_rho = 0.005/stress_phys; // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
-        double t_rho_c = 10*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
-        double K_t = 0.4; // Saturation of mechanical force by collagen
-        double K_t_c = 1/10.; // saturation of chemical on force. this can be calculated from steady state
+        double k0_scaffold = k0; //k0_vector[sample]/stress_phys; // neo hookean for skin, used previously, in MPa
+        double kf_scaffold = kf; //kf_vector[sample]/stress_phys; // stiffness of collagen in MPa, from previous paper
+        double k2_scaffold = k2; //k2_vector[sample]; // nonlinear exponential coefficient, non-dimensional
+        double t_rho = t_rho_vector[sample]/stress_phys; //0.005/stress_phys; // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
+        double t_rho_c = tau_t_rho_c_vector[sample]/stress_phys*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
+        double K_t = K_t_vector[sample]; //0.4; // Saturation of mechanical force by collagen
+        double K_t_c = K_t_c_vector[sample]; //1/10.; // saturation of chemical on force. this can be calculated from steady state
         double D_rhorho = 0.0833*t_max/(x_length*x_length); // diffusion of cells in [mm^2/hour], not normalized
         double D_rhoc = (-1.66e-12/c_max)*t_max/(x_length*x_length); // diffusion of chemotactic gradient, an order of magnitude greater than random walk [mm^2/hour], not normalized
         double D_cc = 0.01208*t_max/(x_length*x_length); // 0.15 diffusion of chemical TGF, not normalized.
@@ -140,8 +147,8 @@ int main(int argc, char *argv[])
         double p_c_rho = 90.0e-16*t_max/c_max/c_max;// production of c by cells in g/cells/h
         double p_c_thetaE = 300.0e-16*t_max/c_max/c_max; // coupling of elastic and chemical, three fold
         double K_c_c = 1./c_max;// saturation of chem by chem, from steady state
-        double d_c = 0.001*t_max; // 0.01 decay of chemical in 1/hours
-        double d_c_phif_scaffold_rho = d_c_phi_rho_vector[sample]*t_max; // 0.01 decay of chemical in 1/hours
+        double d_c = 0.01*t_max; // 0.01 decay of chemical in 1/hours
+        double d_c_phif_scaffold_rho = 0; //d_c_phi_rho_vector[sample]*t_max; // 0.01 decay of chemical in 1/hours
         //---------------------------------//
         std::vector<double> global_parameters = {k0,kf,k2,t_rho,t_rho_c,K_t,K_t_c,D_rhorho,D_rhoc,D_cc,p_rho,p_rho_c,p_rho_theta,K_rho_c,K_rho_rho,d_rho,vartheta_e,gamma_theta,p_c_rho,p_c_thetaE,K_c_c,d_c, k0_scaffold, kf_scaffold, k2_scaffold, d_c_phif_scaffold_rho};
 
@@ -155,7 +162,7 @@ int main(int argc, char *argv[])
         double K_phi_c = 0.0001/c_max; // saturation of C effect on deposition. RANDOM?
         double d_phi = 0.000970*t_max; // rate of degradation, in the order of the wound process, 100 percent in one year for wound, means 0.000116 effective per hour means degradation = 0.002 - 0.000116
         double d_phi_rho_c = 0.5*d_phi; // 0.000194; // degradation coupled to chemical and cell density to maintain phi equilibrium
-        double d_phi_scaffold = d_phif_vector[sample]*t_max; // rate of degradation, in the order of the wound process, 100 percent in one year for wound, means 0.000116 effective per hour means degradation = 0.002 - 0.000116
+        double d_phi_scaffold = d_phi; //d_phif_vector[sample]*t_max; // rate of degradation, in the order of the wound process, 100 percent in one year for wound, means 0.000116 effective per hour means degradation = 0.002 - 0.000116
         double d_phi_rho_c_scaffold = 0.5*d_phi_scaffold; // 0.000194; // degradation coupled to chemical and cell density to maintain phi equilibrium
         double K_phi_rho = p_phi/d_phi - 1; // saturation of collagen fraction itself, from steady state
         //
@@ -168,8 +175,8 @@ int main(int argc, char *argv[])
         double gamma_kappa = 5.; // exponent of the principal stretch ratio
         //
         // permanent contracture/growth
-        double tau_lamdaP_a = 0.1/(K_phi_rho+1); // time constant for direction a, on the order of a year
-        double tau_lamdaP_s = 0.1/(K_phi_rho+1); // time constant for direction s, on the order of a year
+        double tau_lamdaP_a = tau_lamdaP_vector[sample]/(K_phi_rho+1); //0.1/(K_phi_rho+1); // time constant for direction a, on the order of a year
+        double tau_lamdaP_s = tau_lamdaP_vector[sample]/(K_phi_rho+1); //0.1/(K_phi_rho+1); // time constant for direction s, on the order of a year
         //
         // solution parameters
         double tol_local = 1e-5; // local tolerance
@@ -187,9 +194,9 @@ int main(int argc, char *argv[])
         double c_wound = 1.0; //1.0e-4;
         double phif0_wound = 0;
         double phif_scaffold_0_wound = phi_vector[sample];
-        double kappa0_wound = kappa_vector[sample];
-        double a0x = cos(mu_vector[sample]); //
-        double a0y = sin(mu_vector[sample]);
+        double kappa0_wound = 0.5; //kappa_vector[sample];
+        double a0x = 1/sqrt(2); //cos(mu_vector[sample]); //
+        double a0y = 1/sqrt(2); //sin(mu_vector[sample]);
         Vector2d a0_wound; a0_wound<<a0x,a0y;
         Vector2d lamda0_wound; lamda0_wound<<1.,1.;
         //---------------------------------//
