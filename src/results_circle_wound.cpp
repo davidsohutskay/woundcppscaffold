@@ -195,8 +195,9 @@ int main(int argc, char *argv[])
         double phif0_wound = 0;
         double phif_scaffold_0_wound = phi_vector[sample];
         double kappa0_wound = 0.5; //kappa_vector[sample];
-        double a0x = 1/sqrt(2); //cos(mu_vector[sample]); //
-        double a0y = 1/sqrt(2); //sin(mu_vector[sample]);
+        double mu_wound = 3.1415926535; //mu_vector[sample];
+        double a0x = cos(mu_wound);
+        double a0y = sin(mu_wound);
         Vector2d a0_wound; a0_wound<<a0x,a0y;
         Vector2d lamda0_wound; lamda0_wound<<1.,1.;
         //---------------------------------//
@@ -208,7 +209,7 @@ int main(int argc, char *argv[])
         double c_healthy = 0.0;
         double phif0_healthy= 1.;
         double phif_scaffold_0_healthy= 0.;
-        double kappa0_healthy = 0.4;
+        double kappa0_healthy = 0.35;
         double mu_healthy = 0;
         Vector2d a0_healthy;a0_healthy<<1.0,0.0;
         Vector2d lamda0_healthy;lamda0_healthy<<1.,1.;
@@ -360,7 +361,7 @@ int main(int argc, char *argv[])
                     std::cout<<"IP transition node: "<<IP_size*elemi+ip<<"\n";
                     ip_phi0[elemi*IP_size+ip] = phif0_healthy*smoother_step;
                     ip_phi_scaffold_0[elemi*IP_size+ip] = phif_scaffold_0_wound*(1 - smoother_step);
-                    double mu_interp = mu_vector[sample]*(1 - smoother_step);
+                    double mu_interp = mu_wound*(1 - smoother_step);
                     Vector2d a0_transition = Vector2d(cos(mu_interp),sin(mu_interp));
                     ip_a00[elemi*IP_size+ip] = a0_wound;
                     if(kappa0_healthy >= kappa0_wound){
