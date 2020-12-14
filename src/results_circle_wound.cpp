@@ -95,12 +95,12 @@ int main(int argc, char *argv[])
 //        d_c_phi_rho_vector.push_back(std::stod(strs[7]));
 
         // Biophysical parameters
-        t_rho_vector.push_back(std::stod(strs[1]));
-        tau_t_rho_c_vector.push_back(std::stod(strs[2]));
-        K_t_vector.push_back(std::stod(strs[3]));
-        K_t_c_vector.push_back(std::stod(strs[4]));
-        tau_lamdaP_vector.push_back(std::stod(strs[5]));
-        phi_vector.push_back(std::stod(strs[6]));
+        t_rho_vector.push_back(std::stod(strs[0]));
+        tau_t_rho_c_vector.push_back(std::stod(strs[1]));
+        K_t_vector.push_back(std::stod(strs[2]));
+        K_t_c_vector.push_back(std::stod(strs[3]));
+        tau_lamdaP_vector.push_back(std::stod(strs[4]));
+        phi_vector.push_back(std::stod(strs[5]));
     }
 
     // Check the length for samples
