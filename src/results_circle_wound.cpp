@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
         double kf_scaffold = kf; //kf_vector[sample]/stress_phys; // stiffness of collagen in MPa, from previous paper
         double k2_scaffold = k2; //k2_vector[sample]; // nonlinear exponential coefficient, non-dimensional
         double t_rho = t_rho_vector[sample]/stress_phys; //0.005/stress_phys; // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
-        double t_rho_c = tau_t_rho_c_vector[sample]/stress_phys*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
+        double t_rho_c = tau_t_rho_c_vector[sample]*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
         double K_t = K_t_vector[sample]; //0.4; // Saturation of mechanical force by collagen
         double K_t_c = K_t_c_vector[sample]; //1/10.; // saturation of chemical on force. this can be calculated from steady state
         double D_rhorho = 0.0833*t_max/(x_length*x_length); // diffusion of cells in [mm^2/hour], not normalized
