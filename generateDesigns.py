@@ -16,7 +16,7 @@ import pyDOE as pd
 import numpy as np
 
 # Specify how many simulations you can afford:
-num_simulations = 200
+num_simulations = 250
 
 # Constants
 
@@ -25,14 +25,21 @@ num_simulations = 200
 # The purpose here is to cover the range of possible inputs as well
 # as possible.
 # [left, right] bounds
-bounds = np.array([[0.0511/10, 0.0511*100], # k_0 [MPa]
-                   [0.015/10, 0.015*100], # kf [MPa]
-                   [0.048/10, 0.048*100], # k2 [-]
-                   [0,np.pi], # mu
-                   [0.0, 0.5], # kappa
-                   [0.01, 1.0], # phif_scaffold [-]
-                   [0.000970, 0.000970*100], # d_phif_scaffold [/hr]
-                   [0.0, 0.1]]) # d_c_phif_rho [g/mm3]
+bounds = np.array([[0.0511/10, 0.0511*10], # k_0 [MPa]
+                    [0.015/10, 0.015*10], # kf [MPa]
+                    [0.048/10, 0.048*10], # k2 [-]
+                    [0,np.pi], # mu
+                    [0.0, 0.5], # kappa
+                    [0.01, 1.0], # phif_scaffold [-]
+                    [0.000970, 0.000970*100], # d_phif_scaffold [/hr]
+                    [0.0, 0.1]]) # d_c_phif_rho [g/mm3]
+
+# bounds = np.array([[0.001, 0.01], # t_rho
+#                    [5, 50], # tau_t_rho_c
+#                    [0.01, 1.0], # K_t
+#                    [1/100,1/1], # K_t_c
+#                    [1.0, 0.001], # tau_lamda_P
+#                    [0.01, 1.0]]) # phif_scaffold [-]
 
 # Other interesting parameters
 # t_rho, K_t, tau_lamdaP, D_0/D_inf, H
@@ -48,12 +55,12 @@ X_scaled = pd.lhs(num_inputs, num_simulations)
 X = X_scaled * (bounds[:, 1] - bounds[:, 0]) + bounds[:, 0]
 
 # Split into a few separate runs
-X1 = X[0:200,:]
+#X1 = X[0:200,:]
 # X2 = X[400:800,:]
 # X3 = X[800:1200,:]
 
 # Save to a text file
-np.savetxt('samples_to_run.txt', X1, fmt='%.6f')
+np.savetxt('samples_to_run.txt', X, fmt='%.6f')
 # np.savetxt('samples_to_run_2.txt', X2, fmt='%.6f')
 # np.savetxt('samples_to_run_3.txt', X3, fmt='%.6f')
 
