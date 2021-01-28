@@ -34,7 +34,7 @@ num_simulations = 250
 #                     [0.000970, 0.000970*100], # d_phif_scaffold [/hr]
 #                     [0.0, 0.1]]) # d_c_phif_rho [g/mm3]
 
-bounds = np.array([[0.001, 0.01], # t_rho
+bounds = np.array([[0.001, 0.1], # t_rho
                     #[5, 50], # tau_t_rho_c
                     [0.01, 1.0], # K_t
                     #[1/100,1/1], # K_t_c
