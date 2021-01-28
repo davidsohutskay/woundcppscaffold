@@ -66,9 +66,9 @@ int main(int argc, char *argv[])
 //    std::vector<double> d_c_phi_rho_vector;
 
     std::vector<double> t_rho_vector;
-    std::vector<double> tau_t_rho_c_vector;
+    //std::vector<double> tau_t_rho_c_vector;
     std::vector<double> K_t_vector;
-    std::vector<double> K_t_c_vector;
+    //std::vector<double> K_t_c_vector;
     std::vector<double> tau_lamdaP_vector;
     std::vector<double> phi_vector;
 
@@ -96,9 +96,9 @@ int main(int argc, char *argv[])
 
         // Biophysical parameters
         t_rho_vector.push_back(std::stod(strs[0]));
-        tau_t_rho_c_vector.push_back(std::stod(strs[1]));
+        //tau_t_rho_c_vector.push_back(std::stod(strs[1]));
         K_t_vector.push_back(std::stod(strs[2]));
-        K_t_c_vector.push_back(std::stod(strs[3]));
+        //K_t_c_vector.push_back(std::stod(strs[3]));
         tau_lamdaP_vector.push_back(std::stod(strs[4]));
         phi_vector.push_back(std::stod(strs[5]));
     }
@@ -110,6 +110,8 @@ int main(int argc, char *argv[])
     // Run each set of parameters separately in the loop
     std::vector<int> success_vector;
     readfile.close();
+
+    //num_samples = 3*;
 
     for(int sample = 0; sample < num_samples; sample++){
         //---------------------------------//
@@ -130,10 +132,10 @@ int main(int argc, char *argv[])
         double kf_scaffold = kf; //kf_vector[sample]/stress_phys; // stiffness of collagen in MPa, from previous paper
         double k2_scaffold = k2; //k2_vector[sample]; // nonlinear exponential coefficient, non-dimensional
         double K_t = K_t_vector[sample]; //0.4; // Saturation of mechanical force by collagen
-        double K_t_c = K_t_c_vector[sample]; //1/10.; // saturation of chemical on force. this can be calculated from steady state
+        double K_t_c = 1.0/10.0; //K_t_c_vector[sample]; //1/10.; // saturation of chemical on force. this can be calculated from steady state
         double scaling = 0.5/(log(K_t*K_t + 1) - log(K_t*K_t));
         double t_rho = scaling*t_rho_vector[sample]/stress_phys; //0.005/stress_phys; // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
-        double t_rho_c = tau_t_rho_c_vector[sample]*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
+        double t_rho_c = 10*t_rho; //tau_t_rho_c_vector[sample]*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
         double D_rhorho = 0.0833*t_max/(x_length*x_length); // diffusion of cells in [mm^2/hour], not normalized
         double D_rhoc = (-1.66e-12/c_max)*t_max/(x_length*x_length); // diffusion of chemotactic gradient, an order of magnitude greater than random walk [mm^2/hour], not normalized
         double D_cc = 0.01208*t_max/(x_length*x_length); // 0.15 diffusion of chemical TGF, not normalized.
