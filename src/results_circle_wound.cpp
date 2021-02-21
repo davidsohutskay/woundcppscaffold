@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     MatrixXd kappa_vector = MatrixXd::Ones(9,10);;
     MatrixXd d_phif_vector = MatrixXd::Ones(9,10);;
     MatrixXd d_c_phi_rho_vector = MatrixXd::Ones(9,10);;
-    MatrixXd radius_vector = MatrixXd::Ones(9,10);;
+    MatrixXd radius_vector = 7.5*MatrixXd::Ones(9,10);;
 
     // Biochemical test
     if (run_test == 0) {
@@ -114,10 +114,10 @@ int main(int argc, char *argv[]) {
             k2_vector(2,i) = 1./j;
             phi_vector(3,i) = 1./j;
             mu_vector(4,i) = i*3.14/10; // From 0 to 2pi
-            kappa_vector(5,i) = 0.1 + i*0.04; // From 0.1 to 0.5
+            kappa_vector(5,i) = 0.1 + i*0.05; // From 0.1 to 0.5
             d_phif_vector(6,i) = 1./j;
             d_c_phi_rho_vector(7,i) = 1./j;
-            radius_vector(8,i) = (1./j)*5.0; // From 1/2 to 2x
+            radius_vector(8,i) = 3.75 + i*0.9375; // From 1/2 to 2x
 
             k0_vector(0,i+5) = j;
             kf_vector(1,i+5) = j;
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
             kappa_vector(5,i+5) = 0.3 + i*0.04; // From 0 to 2pi
             d_phif_vector(6,i+5) = j;
             d_c_phi_rho_vector(7,i+5) = j;
-            radius_vector(8,i+5) = j/5.0; // From 1/2 to 2x
+            radius_vector(8,i+5) = 7.5 + i*0.9375; // From 1/2 to 2x
 
             std::cout << "i\n" << i << "\n";
             std::cout << "j\n" << j << "\n";
