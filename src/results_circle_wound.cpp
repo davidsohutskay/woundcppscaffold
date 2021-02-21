@@ -117,17 +117,17 @@ int main(int argc, char *argv[]) {
             kappa_vector(5,i) = 0.1 + i*0.05; // From 0.1 to 0.5
             d_phif_vector(6,i) = 1./j;
             d_c_phi_rho_vector(7,i) = 1./j;
-            radius_vector(8,i) = 3.75 + i*0.9375; // From 1/2 to 2x
+            radius_vector(8,i) = 0.1 + i*0.025; // From 1/2 to 2x
 
             k0_vector(0,i+5) = j;
             kf_vector(1,i+5) = j;
             k2_vector(2,i+5) = j;
             phi_vector(3,i+5) = j;
             mu_vector(4,i+5) = 3.14/2 + i*3.14/10; // From 0 to 2pi
-            kappa_vector(5,i+5) = 0.3 + i*0.04; // From 0 to 2pi
+            kappa_vector(5,i+5) = 0.3 + i*0.05; // From 0 to 2pi
             d_phif_vector(6,i+5) = j;
             d_c_phi_rho_vector(7,i+5) = j;
-            radius_vector(8,i+5) = 7.5 + i*0.9375; // From 1/2 to 2x
+            radius_vector(8,i+5) = 0.2 + i*0.025; // From 1/2 to 2x
 
             std::cout << "i\n" << i << "\n";
             std::cout << "j\n" << j << "\n";
@@ -311,8 +311,8 @@ int main(int argc, char *argv[]) {
             double c_wound = 1.0; //1.0e-4;
             double phif0_wound = 0;
             double phif_scaffold_0_wound = 0.1*phi_vector(varnum, sample);
-            double kappa0_wound = 0.5*kappa_vector(varnum, sample); //kappa_vector[sample];
-            double mu_wound = 3.1415926535*mu_vector(varnum, sample); //mu_vector[sample];
+            double kappa0_wound = kappa_vector(varnum, sample); //kappa_vector[sample];
+            double mu_wound = mu_vector(varnum, sample); //mu_vector[sample];
             double a0x = cos(mu_wound);
             double a0y = sin(mu_wound);
             Vector2d a0_wound;
@@ -392,8 +392,8 @@ int main(int argc, char *argv[]) {
             double tol_boundary = 0.01; //0.1;
             double x_center = 0.0; //37.5;
             double y_center = 0.0; //37.5;
-            double x_axis = 0.2*radius_vector(varnum, sample); //7.5 + tol_boundary;
-            double y_axis = 0.2*radius_vector(varnum, sample); //7.5 + tol_boundary;
+            double x_axis = radius_vector(varnum, sample); //7.5 + tol_boundary;
+            double y_axis = radius_vector(varnum, sample); //7.5 + tol_boundary;
             double alpha_ellipse = 0.;
 
             //std::vector<double> ellipse = {x_center, y_center, x_axis, y_axis, alpha_ellipse};
