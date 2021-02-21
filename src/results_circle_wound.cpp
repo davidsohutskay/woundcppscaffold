@@ -60,15 +60,15 @@ int main(int argc, char *argv[]) {
     int num_vars = 1;
 
     // Create empty vectors
-    MatrixXd k0_vector(9,10) = MatrixXd::Ones(9,10);;
-    MatrixXd kf_vector(9,10) = MatrixXd::Ones(9,10);;
-    MatrixXd k2_vector(9,10) = MatrixXd::Ones(9,10);;
-    MatrixXd phi_vector(9,10) = MatrixXd::Ones(9,10);;
-    MatrixXd mu_vector(9,10) = MatrixXd::Zeros(9,10);;
-    MatrixXd kappa_vector(9,10) = MatrixXd::Ones(9,10);;
-    MatrixXd d_phif_vector(9,10) = MatrixXd::Ones(9,10);;
-    MatrixXd d_c_phi_rho_vector(9,10) = MatrixXd::Ones(9,10);;
-    MatrixXd radius_vector(9,10) = MatrixXd::Ones(9,10);;
+    MatrixXd k0_vector = MatrixXd::Ones(9,10);;
+    MatrixXd kf_vector = MatrixXd::Ones(9,10);;
+    MatrixXd k2_vector = MatrixXd::Ones(9,10);;
+    MatrixXd phi_vector = MatrixXd::Ones(9,10);;
+    MatrixXd mu_vector = MatrixXd::Zeros(9,10);;
+    MatrixXd kappa_vector = MatrixXd::Ones(9,10);;
+    MatrixXd d_phif_vector = MatrixXd::Ones(9,10);;
+    MatrixXd d_c_phi_rho_vector = MatrixXd::Ones(9,10);;
+    MatrixXd radius_vector = MatrixXd::Ones(9,10);;
 
     // Biochemical test
     if (run_test == 0) {
