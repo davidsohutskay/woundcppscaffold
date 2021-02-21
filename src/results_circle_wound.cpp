@@ -60,15 +60,15 @@ int main(int argc, char *argv[]) {
     int num_vars = 1;
 
     // Create empty vectors
-    MatrixXd k0_vector;
-    MatrixXd kf_vector;
-    MatrixXd k2_vector;
-    MatrixXd phi_vector;
-    MatrixXd mu_vector;
-    MatrixXd kappa_vector;
-    MatrixXd d_phif_vector;
-    MatrixXd d_c_phi_rho_vector;
-    MatrixXd radius_vector;
+    MatrixXd k0_vector(9,10);
+    MatrixXd kf_vector(9,10);
+    MatrixXd k2_vector(9,10);
+    MatrixXd phi_vector(9,10);
+    MatrixXd mu_vector(9,10);
+    MatrixXd kappa_vector(9,10);
+    MatrixXd d_phif_vector(9,10);
+    MatrixXd d_c_phi_rho_vector(9,10);
+    MatrixXd radius_vector(9,10);
 
     // Biochemical test
     if (run_test == 0) {
@@ -146,7 +146,7 @@ int main(int argc, char *argv[]) {
         // Check the length for samples
         num_samples = 10;
         num_vars = 9;
-        
+
         std::cout << "k0\n" << k0_vector << "\n";
 
         std::cout << "mu\n" << mu_vector << "\n";
