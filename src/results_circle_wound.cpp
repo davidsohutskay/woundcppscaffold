@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     MatrixXd kf_vector = MatrixXd::Ones(9,10);;
     MatrixXd k2_vector = MatrixXd::Ones(9,10);;
     MatrixXd phi_vector = MatrixXd::Ones(9,10);;
-    MatrixXd mu_vector = MatrixXd::Zeros(9,10);;
+    MatrixXd mu_vector = MatrixXd::Zero(9,10);;
     MatrixXd kappa_vector = MatrixXd::Ones(9,10);;
     MatrixXd d_phif_vector = MatrixXd::Ones(9,10);;
     MatrixXd d_c_phi_rho_vector = MatrixXd::Ones(9,10);;
@@ -129,6 +129,8 @@ int main(int argc, char *argv[]) {
             d_c_phi_rho_vector(7,i+5) = j;
             radius_vector(8,i+5) = j/5.0; // From 1/2 to 2x
 
+            std::cout << "i\n" << i << "\n";
+            std::cout << "j\n" << j << "\n";
             i = i + 1;
         }
 
