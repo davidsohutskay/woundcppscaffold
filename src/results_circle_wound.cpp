@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
 
     // Set to 0 for biochemical, 1 for OOM, 2 for training, 3 for single run
-    double run_test = 3;
+    double run_test = 1;
 
     // Open file
     std::string readfilename = "samples_to_run.txt";
@@ -146,7 +146,14 @@ int main(int argc, char *argv[]) {
         // Check the length for samples
         num_samples = 10;
         num_vars = 9;
-        std::cout << "\n" << num_samples << "\n";
+        
+        std::cout << "k0\n" << k0_vector << "\n";
+
+        std::cout << "mu\n" << mu_vector << "\n";
+
+        std::cout << "kappa\n" << kappa_vector << "\n";
+
+        std::cout << "radius\n" << radius_vector << "\n";
     }
 
     // Training
@@ -232,8 +239,7 @@ int main(int argc, char *argv[]) {
             double kf_scaffold = kf * kf_vector(varnum, sample); //kf_vector[sample]/stress_phys; // stiffness of collagen in MPa, from previous paper
             double k2_scaffold = k2 * k2_vector(varnum, sample); //k2_vector[sample]; // nonlinear exponential coefficient, non-dimensional
             double K_t = 0.4; //K_t_vector[sample]; //0.4; // Saturation of mechanical force by collagen
-            double K_t_c = 1.0 /
-                           10.0; //K_t_c_vector[sample]; //1/10.; // saturation of chemical on force. this can be calculated from steady state
+            double K_t_c = 1.0 / 10.0; //K_t_c_vector[sample]; //1/10.; // saturation of chemical on force. this can be calculated from steady state
             double scaling = 0.5 / (log(K_t * K_t + 1) - log(K_t * K_t));
             double t_rho = 0.005/stress_phys; //scaling * t_rho_vector[sample] / stress_phys; // // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
             double t_rho_c = 10 *
@@ -248,8 +254,7 @@ int main(int argc, char *argv[]) {
             double p_rho_c =
                     p_rho / 2; // production enhanced by the chem, if the chemical is normalized, then suggest two fold,
             double p_rho_theta = p_rho / 2; // enhanced production by theta
-            double K_rho_c = 1 /
-                             10.; // saturation of cell proliferation by chemical, this one is definitely not crucial, just has to be small enough <cmax
+            double K_rho_c = 1 / 10.; // saturation of cell proliferation by chemical, this one is definitely not crucial, just has to be small enough <cmax
             double K_rho_rho = 10000 / rho_phys; // saturation of cell by cell, from steady state
             double d_rho = p_rho * (1 - 1 / K_rho_rho); // decay of cells, keeps equilibrium
             double vartheta_e = 2.0; // physiological state of area stretch
@@ -596,7 +601,7 @@ int main(int argc, char *argv[]) {
             ss << sample;
             std::stringstream vv;
             vv << varnum;
-            std::string filename = "var_" + vv.str() + "sample_" + ss.str() + "_paraview_output_";
+            std::string filename = "var_" + vv.str() + "_sample_" + ss.str() + "_paraview_output_";
 
 
             //----------------------------------------------------------//
