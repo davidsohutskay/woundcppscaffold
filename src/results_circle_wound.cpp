@@ -235,8 +235,7 @@ int main(int argc, char *argv[]) {
             double K_t_c = 1.0 /
                            10.0; //K_t_c_vector[sample]; //1/10.; // saturation of chemical on force. this can be calculated from steady state
             double scaling = 0.5 / (log(K_t * K_t + 1) - log(K_t * K_t));
-            double t_rho = scaling * t_rho_vector[sample] /
-                           stress_phys; //0.005/stress_phys; // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
+            double t_rho = 0.005/stress_phys; //scaling * t_rho_vector[sample] / stress_phys; // // 0.0045 force of fibroblasts in MPa, this is per cell. so, in an average sense this is the production by the natural density
             double t_rho_c = 10 *
                              t_rho; //tau_t_rho_c_vector[sample]*t_rho; // 0.045 force of myofibroblasts enhanced by chemical, I'm assuming normalized chemical, otherwise I'd have to add a normalizing constant
             double D_rhorho =
@@ -293,10 +292,9 @@ int main(int argc, char *argv[]) {
             double gamma_kappa = 5.; // exponent of the principal stretch ratio
             //
             // permanent contracture/growth
-            double tau_lamdaP_a = tau_lamdaP_vector[sample] / (K_phi_rho +
-                                                               1); //0.1/(K_phi_rho+1); // time constant for direction a, on the order of a year
-            double tau_lamdaP_s = tau_lamdaP_vector[sample] / (K_phi_rho +
-                                                               1); //0.1/(K_phi_rho+1); // time constant for direction s, on the order of a year
+            double tau_lamdaP_a = 0.1/(K_phi_rho+1); //tau_lamdaP_vector[sample] / (K_phi_rho +1);
+                                                               // 0.1/(K_phi_rho+1); // time constant for direction a, on the order of a year
+            double tau_lamdaP_s = 0.1/(K_phi_rho+1); //tau_lamdaP_vector[sample] / (K_phi_rho + 1); // // time constant for direction s, on the order of a year
             //
             // solution parameters
             double tol_local = 1e-5; // local tolerance
