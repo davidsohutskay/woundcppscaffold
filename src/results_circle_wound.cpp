@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
 
         // Scale by factor of 10 each way
         int i = 0;
-        for(int j = 2; j < 12; j = i + 2){
+        for(int j = 2; j < 12; j = j + 2){
             k0_vector(0,i) = 1./j;
             kf_vector(1,i) = 1./j;
             k2_vector(2,i) = 1./j;
