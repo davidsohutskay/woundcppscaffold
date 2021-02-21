@@ -108,15 +108,15 @@ int main(int argc, char *argv[]) {
 
         // Scale by factor of 10 each way
         // k0, kf, k2, phif, d_phif, d_c_phif_rho
-        MatrixXd k0_vector = MatrixXd::Ones(9,10);
-        MatrixXd kf_vector = MatrixXd::Ones(9,10);
-        MatrixXd k2_vector = MatrixXd::Ones(9,10);
-        MatrixXd phi_vector = MatrixXd::Ones(9,10);
-        MatrixXd mu_vector = MatrixXd::Ones(9,10);
-        MatrixXd kappa_vector = MatrixXd::Ones(9,10);
-        MatrixXd d_phif_vector = MatrixXd::Ones(9,10);
-        MatrixXd d_c_phi_rho_vector = MatrixXd::Ones(9,10);
-        MatrixXd radius_vector = MatrixXd::Ones(9,10);
+        k0_vector = MatrixXd::Ones(9,10);
+        kf_vector = MatrixXd::Ones(9,10);
+        k2_vector = MatrixXd::Ones(9,10);
+        phi_vector = MatrixXd::Ones(9,10);
+        mu_vector = MatrixXd::Ones(9,10);
+        kappa_vector = MatrixXd::Ones(9,10);
+        d_phif_vector = MatrixXd::Ones(9,10);
+        d_c_phi_rho_vector = MatrixXd::Ones(9,10);
+        radius_vector = MatrixXd::Ones(9,10);
 
         int i = 0;
         for(int j = 2; j < 12; j = i + 2){
