@@ -56,10 +56,20 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int num_samples = 0;
+    int num_samples = 1;
     int num_vars = 1;
 
     // Create empty vectors
+    MatrixXd k0_vector;
+    MatrixXd kf_vector;
+    MatrixXd k2_vector;
+    MatrixXd phi_vector;
+    MatrixXd mu_vector;
+    MatrixXd kappa_vector;
+    MatrixXd d_phif_vector;
+    MatrixXd d_c_phi_rho_vector;
+    MatrixXd radius_vector;
+
     // Biochemical test
     if (run_test == 0) {
         std::vector<double> t_rho_vector;
@@ -114,23 +124,23 @@ int main(int argc, char *argv[]) {
             kf_vector(1,i) = 1/j;
             k2_vector(2,i) = 1/j;
             phi_vector(3,i) = 1/j;
-            mu_vector(4,i) = count*3.14/10; // From 0 to 2pi
-            kappa_vector(5,i) = 0.1 + count*0.04; // From 0.1 to 0.5
+            mu_vector(4,i) = i*3.14/10; // From 0 to 2pi
+            kappa_vector(5,i) = 0.1 + i*0.04; // From 0.1 to 0.5
             d_phif_vector(6,i) = 1/j;
             d_c_phi_rho_vector(7,i) = 1/j;
-            radius_vector(8,i) = 3.75 + count*0.9375; // From 1/2 to 2x
+            radius_vector(8,i) = 3.75 + i*0.9375; // From 1/2 to 2x
 
             k0_vector(0,i+5) = j;
             kf_vector(1,i+5) = j;
             k2_vector(2,i+5) = j;
             phi_vector(3,i+5) = j;
-            mu_vector(4,i+5) = 3.14/2 + count*3.14/10; // From 0 to 2pi
-            kappa_vector(5,i+5) = 0.3 + count*0.04; // From 0 to 2pi
+            mu_vector(4,i+5) = 3.14/2 + i*3.14/10; // From 0 to 2pi
+            kappa_vector(5,i+5) = 0.3 + i*0.04; // From 0 to 2pi
             d_phif_vector(6,i+5) = j;
             d_c_phi_rho_vector(7,i+5) = j;
-            radius_vector(8,i+5) = 7.5 + count*0.9375; // From 1/2 to 2x
+            radius_vector(8,i+5) = 7.5 + i*0.9375; // From 1/2 to 2x
 
-            count = count + 1;
+            i = i + 1;
         }
 
         // Check the length for samples
@@ -183,15 +193,15 @@ int main(int argc, char *argv[]) {
 
         // Scale by factor of 10 each way
         // k0, kf, k2, phif, d_phif, d_c_phif_rho
-        MatrixXd k0_vector = MatrixXd::Ones(1,1);
-        MatrixXd kf_vector = MatrixXd::Ones(1,1);
-        MatrixXd k2_vector = MatrixXd::Ones(1,1);
-        MatrixXd phi_vector = MatrixXd::Ones(1,1);
-        MatrixXd mu_vector = MatrixXd::Ones(1,1);
-        MatrixXd kappa_vector = MatrixXd::Ones(1,1);
-        MatrixXd d_phif_vector = MatrixXd::Ones(1,1);
-        MatrixXd d_c_phi_rho_vector = MatrixXd::Ones(1,1);
-        MatrixXd radius_vector = MatrixXd::Ones(1,1);
+        k0_vector = MatrixXd::Ones(1,1);
+        kf_vector = MatrixXd::Ones(1,1);
+        k2_vector = MatrixXd::Ones(1,1);
+        phi_vector = MatrixXd::Ones(1,1);
+        mu_vector = MatrixXd::Ones(1,1);
+        kappa_vector = MatrixXd::Ones(1,1);
+        d_phif_vector = MatrixXd::Ones(1,1);
+        d_c_phi_rho_vector = MatrixXd::Ones(1,1);
+        radius_vector = MatrixXd::Ones(1,1);
 
         // Check the length for samples
         num_samples = 1;
