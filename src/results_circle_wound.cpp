@@ -60,15 +60,15 @@ int main(int argc, char *argv[]) {
     int num_vars = 1;
 
     // Create empty vectors
-    MatrixXd k0_vector(9,10);
-    MatrixXd kf_vector(9,10);
-    MatrixXd k2_vector(9,10);
-    MatrixXd phi_vector(9,10);
-    MatrixXd mu_vector(9,10);
-    MatrixXd kappa_vector(9,10);
-    MatrixXd d_phif_vector(9,10);
-    MatrixXd d_c_phi_rho_vector(9,10);
-    MatrixXd radius_vector(9,10);
+    MatrixXd k0_vector(9,10) = MatrixXd::Ones(9,10);;
+    MatrixXd kf_vector(9,10) = MatrixXd::Ones(9,10);;
+    MatrixXd k2_vector(9,10) = MatrixXd::Ones(9,10);;
+    MatrixXd phi_vector(9,10) = MatrixXd::Ones(9,10);;
+    MatrixXd mu_vector(9,10) = MatrixXd::Zeros(9,10);;
+    MatrixXd kappa_vector(9,10) = MatrixXd::Ones(9,10);;
+    MatrixXd d_phif_vector(9,10) = MatrixXd::Ones(9,10);;
+    MatrixXd d_c_phi_rho_vector(9,10) = MatrixXd::Ones(9,10);;
+    MatrixXd radius_vector(9,10) = MatrixXd::Ones(9,10);;
 
     // Biochemical test
     if (run_test == 0) {
@@ -107,28 +107,17 @@ int main(int argc, char *argv[]) {
         // Don't need to import
 
         // Scale by factor of 10 each way
-        // k0, kf, k2, phif, d_phif, d_c_phif_rho
-        k0_vector = MatrixXd::Ones(9,10);
-        kf_vector = MatrixXd::Ones(9,10);
-        k2_vector = MatrixXd::Ones(9,10);
-        phi_vector = MatrixXd::Ones(9,10);
-        mu_vector = MatrixXd::Ones(9,10);
-        kappa_vector = MatrixXd::Ones(9,10);
-        d_phif_vector = MatrixXd::Ones(9,10);
-        d_c_phi_rho_vector = MatrixXd::Ones(9,10);
-        radius_vector = MatrixXd::Ones(9,10);
-
         int i = 0;
         for(int j = 2; j < 12; j = i + 2){
-            k0_vector(0,i) = 1/j;
-            kf_vector(1,i) = 1/j;
-            k2_vector(2,i) = 1/j;
-            phi_vector(3,i) = 1/j;
+            k0_vector(0,i) = 1./j;
+            kf_vector(1,i) = 1./j;
+            k2_vector(2,i) = 1./j;
+            phi_vector(3,i) = 1./j;
             mu_vector(4,i) = i*3.14/10; // From 0 to 2pi
             kappa_vector(5,i) = 0.1 + i*0.04; // From 0.1 to 0.5
-            d_phif_vector(6,i) = 1/j;
-            d_c_phi_rho_vector(7,i) = 1/j;
-            radius_vector(8,i) = 3.75 + i*0.9375; // From 1/2 to 2x
+            d_phif_vector(6,i) = 1./j;
+            d_c_phi_rho_vector(7,i) = 1./j;
+            radius_vector(8,i) = (1./j)*5.0; // From 1/2 to 2x
 
             k0_vector(0,i+5) = j;
             kf_vector(1,i+5) = j;
@@ -138,7 +127,7 @@ int main(int argc, char *argv[]) {
             kappa_vector(5,i+5) = 0.3 + i*0.04; // From 0 to 2pi
             d_phif_vector(6,i+5) = j;
             d_c_phi_rho_vector(7,i+5) = j;
-            radius_vector(8,i+5) = 7.5 + i*0.9375; // From 1/2 to 2x
+            radius_vector(8,i+5) = j/5.0; // From 1/2 to 2x
 
             i = i + 1;
         }
