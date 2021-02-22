@@ -606,7 +606,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < num_samples; i++) {
             saveparamsfile << success_vector[i] << "\n";
         }
-        saveparamsfile.close();
-        return 0;
     }
+    saveparamsfile.close();
+    return 0;
 }
